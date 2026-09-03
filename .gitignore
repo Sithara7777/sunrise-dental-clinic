@@ -1,0 +1,86 @@
+# =========================================================================
+#  Sunrise Dental Clinic Management System - Git exclusions
+# =========================================================================
+#  Task D requires this repository to be PUBLIC, so the rules below are not
+#  only about keeping the tree tidy. Anything that could expose clinic data or
+#  a credential must never be committed, because rewriting public Git history
+#  to remove a secret is unreliable and the secret must be treated as burned
+#  the moment it is pushed.
+# =========================================================================
+
+# ------------------------------------------------------------------ build
+target/
+!.mvn/wrapper/maven-wrapper.jar
+build/
+out/
+bin/
+*.class
+*.jar
+*.war
+!.mvn/wrapper/*.jar
+
+# ------------------------------------------------- PATIENT DATA (critical)
+# The H2 file database. It holds real patient names, addresses, telephone
+# numbers and clinical notes once the system is in use. It must never reach a
+# public repository.
+data/
+*.mv.db
+*.trace.db
+*.lock.db
+
+# ---------------------------------------------------- secrets and overrides
+# Local configuration overrides, which are where SMTP passwords and database
+# credentials end up in practice.
+application-local.yml
+application-local.properties
+application-secret*.yml
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
+secrets/
+
+# ------------------------------------------------------------------- logs
+*.log
+logs/
+server-boot*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# ------------------------------------------------------------------- IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+nbproject/
+nb-configuration.xml
+
+# ------------------------------------------------------------ OS artefacts
+.DS_Store
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ------------------------------------------------------------------ Maven
+.mvn/timing.properties
+.flattened-pom.xml
+dependency-reduced-pom.xml
+
+# ------------------------------------------------------------------ misc
+*.bak
+*.tmp
+*.orig
+*.rej
+.scratch/
+
+# ------------------------------------------------------- documentation
+# Python bytecode from the documentation build scripts in docs/.
+__pycache__/
+*.pyc
