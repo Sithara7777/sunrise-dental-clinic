@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<!--
+  The patient record and their complete visit history.
+
+  This screen is the answer to "lost patient records" in the scenario: because
+  a patient exists once and every visit points at that one record, their whole
+  history is a single query.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('patients')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1 th:text="${patient.fullName}">Patient</h1>
+            <div class="sub">
+                <span class="mono" th:text="${patient.patientCode}">PAT-000001</span>
+                &nbsp;&mdash;&nbsp;
+                <span th:text="${patient.totalVisits}">0</span> visits on record
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-primary"
+               th:href="@{/appointments/new(patientCode=${patient.patientCode})}">Book Appointment</a>
+            <a class="btn btn-secondary"
+               th:href="@{'/patients/' + ${patient.patientCode} + '/edit'}">Edit details</a>
+            <a class="btn btn-secondary" th:href="@{/patients}">Back to patients</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="grid grid-2">
+        <div class="card">
+            <h2>Details</h2>
+            <div class="card-body">
+                <dl class="detail">
+                    <dt>Patient number</dt>
+                    <dd class="mono" th:text="${patient.patientCode}">PAT</dd>
+                    <dt>Full name</dt>
+                    <dd th:text="${patient.fullName}">Name</dd>
+                    <dt>Address</dt>
+                    <dd th:text="${patient.address}">Address</dd>
+                    <dt>Contact number</dt>
+                    <dd class="mono" th:text="${patient.contactNumber}">Contact</dd>
+                    <dt>E-mail</dt>
+                    <dd th:text="${patient.email} ?: 'Not supplied'">-</dd>
+                    <dt>NIC</dt>
+                    <dd class="mono" th:text="${patient.nic} ?: 'Not supplied'">-</dd>
+                    <dt>Date of birth</dt>
+                    <dd>
+                        <span th:if="${patient.dateOfBirth != null}"
+                              th:text="${#temporals.format(patient.dateOfBirth, 'dd MMM yyyy')}">DOB</span>
+                        <span th:if="${patient.dateOfBirth == null}">Not supplied</span>
+                    </dd>
+                    <dt>Gender</dt>
+                    <dd th:text="${patient.gender != null} ? ${patient.gender.displayName} : '-'">-</dd>
+                    <dt>Registered</dt>
+                    <dd th:text="${#temporals.format(patient.registeredAt, 'dd MMM yyyy')}">Date</dd>
+                </dl>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Clinical notes</h2>
+            <div class="card-body">
+                <p th:text="${patient.medicalNotes} ?: 'No notes have been recorded for this patient.'"
+                   th:classappend="${patient.medicalNotes == null} ? 'muted' : ''">Notes</p>
+
+                <div class="alert alert-warning mt-2 mb-0"
+                     th:if="${patient.dateOfBirth != null and
+                             T(java.time.Period).between(patient.dateOfBirth, T(java.time.LocalDate).now()).getYears() >= 65}">
+                    <strong>Senior citizen</strong>
+                    A 10% concession is applied automatically to clinically necessary treatment.
+                </div>
+                <div class="alert alert-info mt-2 mb-0"
+                     th:if="${patient.dateOfBirth != null and
+                             T(java.time.Period).between(patient.dateOfBirth, T(java.time.LocalDate).now()).getYears() &lt; 18}">
+                    <strong>Child patient</strong>
+                    A 5% concession is applied automatically to clinically necessary treatment.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Visit history
+            <span class="muted small" th:text="'(' + ${#lists.size(history)} + ')'">(0)</span></h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Appointment No</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Dentist</th>
+                    <th>Treatment</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="h : ${history}">
+                    <td class="mono" th:text="${h.appointmentNumber}">APT</td>
+                    <td class="nowrap"
+                        th:text="${#temporals.format(h.appointmentDate, 'dd MMM yyyy')}">Date</td>
+                    <td class="nowrap"
+                        th:text="${#temporals.format(h.appointmentTime, 'HH:mm')}">Time</td>
+                    <td th:text="'Dr ' + ${h.dentistName}">Dentist</td>
+                    <td th:text="${h.treatmentName}">Treatment</td>
+                    <td>
+                        <span class="badge" th:classappend="${h.status.cssClass}"
+                              th:text="${h.status.displayName}">Status</span>
+                    </td>
+                    <td class="right">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/appointments/' + ${h.appointmentNumber}}">Open</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(history)}">
+                    <td colspan="7" class="empty">This patient has no appointments yet.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!--
+  The single error page for browser requests.
+
+  Business failures show their own message, because that message was written
+  for the user. Unexpected failures show a generic sentence - never the
+  exception text, which routinely contains SQL, file paths and class names.
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}" sec:authorize="isAuthenticated()"></div>
+<nav th:replace="~{fragments/layout :: nav('')}" sec:authorize="isAuthenticated()"></nav>
+
+<main class="page">
+
+    <div class="card" style="max-width:720px; margin: 2rem auto;">
+        <h2 th:text="${errorTitle} ?: 'Something went wrong'">Something went wrong</h2>
+        <div class="card-body">
+            <p style="font-size:1.02rem;" th:text="${errorDetail}">Detail</p>
+            <p class="muted small" th:text="${errorHint}">Hint</p>
+
+            <div class="btn-row">
+                <a class="btn btn-primary" th:href="@{/dashboard}"
+                   sec:authorize="isAuthenticated()">Back to dashboard</a>
+                <a class="btn btn-primary" th:href="@{/login}"
+                   sec:authorize="!isAuthenticated()">Sign in</a>
+                <a class="btn btn-secondary" th:href="@{/help}">Help</a>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+  Shared page furniture: <head>, the top bar, the main navigation, the flash
+  message block and the footer.
+
+  Every screen pulls these in with th:replace, so the header, the navigation
+  and the message handling exist once. Adding a menu item is one edit here
+  rather than one edit in each of twenty templates.
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<!-- ================= HEAD ================= -->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' | Sunrise Dental Clinic'">Sunrise Dental Clinic</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>&#129463;</text></svg>">
+</head>
+
+<body>
+
+<!-- ================= TOP BAR ================= -->
+<div th:fragment="topbar" class="topbar">
+    <a class="brand" th:href="@{/dashboard}">
+        <span class="mark">&#129463;</span>
+        <span>Sunrise Dental Clinic</span>
+    </a>
+
+    <span class="spacer"></span>
+
+    <!-- Table density, stored in the clinic-prefs cookie. -->
+    <form th:action="@{/preferences/density}" method="post" class="no-print"
+          style="display:flex; gap:.3rem; align-items:center;">
+        <input type="hidden" name="value"
+               th:value="${density == 'compact' ? 'comfortable' : 'compact'}">
+        <button type="submit" class="btn btn-sm btn-secondary"
+                th:title="'Currently ' + ${density} + ' - click to switch. Stored in the clinic-prefs cookie.'"
+                th:text="${density == 'compact' ? 'Comfortable view' : 'Compact view'}">Compact view</button>
+    </form>
+
+    <!-- Rendered from model attributes, not straight off the principal: see
+         GlobalModelAdvice for why a header must not be able to 500 a page. -->
+    <div class="who" sec:authorize="isAuthenticated()">
+        <strong th:text="${currentUserName}">Staff member</strong>
+        <span th:text="${currentUserRole}">Role</span>
+    </div>
+
+    <form th:action="@{/logout}" method="post" class="no-print" sec:authorize="isAuthenticated()">
+        <button type="submit" class="btn btn-sm btn-secondary">Sign out</button>
+    </form>
+</div>
+
+<!-- ================= NAVIGATION ================= -->
+<nav th:fragment="nav(active)" class="mainnav">
+    <a th:href="@{/dashboard}"    th:classappend="${active == 'dashboard'} ? 'active'">Dashboard</a>
+    <a th:href="@{/appointments}" th:classappend="${active == 'appointments'} ? 'active'">Appointments</a>
+    <a th:href="@{/appointments/new}" th:classappend="${active == 'new'} ? 'active'">New Appointment</a>
+    <a th:href="@{/patients}"     th:classappend="${active == 'patients'} ? 'active'">Patients</a>
+    <a th:href="@{/invoices}"     th:classappend="${active == 'billing'} ? 'active'"
+       sec:authorize="hasAnyAuthority('ROLE_ADMIN','ROLE_RECEPTIONIST')">Billing</a>
+    <a th:href="@{/reports}"      th:classappend="${active == 'reports'} ? 'active'">Reports</a>
+    <a th:href="@{/dentists}"     th:classappend="${active == 'dentists'} ? 'active'">Dentists</a>
+    <a th:href="@{/treatments}"   th:classappend="${active == 'treatments'} ? 'active'">Treatments</a>
+    <a th:href="@{/admin/audit}"  th:classappend="${active == 'admin'} ? 'active'"
+       sec:authorize="hasAuthority('ROLE_ADMIN')">Administration</a>
+    <a th:href="@{/help}"         th:classappend="${active == 'help'} ? 'active'">Help</a>
+</nav>
+
+<!-- ================= FLASH MESSAGES ================= -->
+<div th:fragment="messages">
+    <div class="alert alert-success" th:if="${successMessage}">
+        <strong>Done</strong>
+        <span th:text="${successMessage}"></span>
+    </div>
+    <div class="alert alert-error" th:if="${errorMessage}">
+        <strong>Not completed</strong>
+        <span th:text="${errorMessage}"></span>
+    </div>
+    <div class="alert alert-info" th:if="${infoMessage}">
+        <span th:text="${infoMessage}"></span>
+    </div>
+    <div class="alert alert-warning" th:if="${warningMessage}">
+        <span th:text="${warningMessage}"></span>
+    </div>
+</div>
+
+<!-- ================= RECENTLY VIEWED (session state) ================= -->
+<div th:fragment="recentlyViewed" class="card no-print"
+     th:if="${recentlyViewed != null and !recentlyViewed.isEmpty()}">
+    <h3>Recently viewed <span class="muted small">(held in your session only)</span></h3>
+    <div class="card-body">
+        <div class="chips">
+            <a class="chip" th:each="entry : ${recentlyViewed}"
+               th:href="@{'/appointments/' + ${entry.appointmentNumber}}"
+               th:title="${entry.patientName} + ' - ' + ${entry.status}">
+                <span class="mono" th:text="${entry.appointmentNumber}">APT</span>
+                &mdash;
+                <span th:text="${entry.patientName}">Patient</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ================= FOOTER ================= -->
+<footer th:fragment="footer" class="appfoot">
+    <div>
+        <strong>Sunrise Dental Clinic</strong> &mdash; No. 172, Galle Road, Colombo 03
+        &nbsp;|&nbsp; Tel: +94 11 2 573 100
+    </div>
+    <div class="mt-1">
+        CIS6003 Advanced Programming &mdash; WRIT1 &nbsp;|&nbsp;
+        <a th:href="@{/swagger-ui.html}">REST API documentation</a> &nbsp;|&nbsp;
+        <a th:href="@{/help}">Help</a>
+    </div>
+</footer>
+
+</body>
+</html>

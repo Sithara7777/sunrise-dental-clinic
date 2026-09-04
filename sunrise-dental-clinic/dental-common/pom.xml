@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  dental-common - the shared service contract.
+
+  This module contains ONLY Data Transfer Objects, enums and constants. It has
+  no knowledge of JPA, Spring or Swing. Both the server (which produces the
+  JSON) and the remote desktop client (which consumes it) depend on this
+  module, so the two independently deployable processes agree on the wire
+  format at compile time instead of at runtime.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>lk.icbt.cis6003</groupId>
+        <artifactId>sunrise-dental-clinic</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>dental-common</artifactId>
+    <name>Sunrise Dental :: Common Contract</name>
+
+    <dependencies>
+        <!-- Bean Validation annotations travel with the DTOs so the same
+             constraints are enforced by the server AND can be echoed by the
+             client before a request is even sent (fail fast). -->
+        <dependency>
+            <groupId>jakarta.validation</groupId>
+            <artifactId>jakarta.validation-api</artifactId>
+        </dependency>
+
+        <!-- Jackson annotations only (not the databind engine) so the DTOs can
+             describe their own JSON shape without dragging in a parser. -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+        </dependency>
+
+        <!-- A real Bean Validation engine, so the DTO constraints can be
+             tested as the server will actually apply them rather than by
+             re-implementing the regular expressions in the test. -->
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Hibernate Validator needs a Jakarta EL implementation to build
+             constraint messages. This is the same one spring-boot-starter-validation
+             uses on the server, and its version is managed by the Boot BOM. -->
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-el</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

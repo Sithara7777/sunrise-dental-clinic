@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('admin')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Staff Accounts</h1>
+            <div class="sub">Only these accounts can use the system &mdash; requirement 1.</div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/admin/audit}">Audit trail</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="card">
+        <h2>Accounts</h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>E-mail</th>
+                    <th>Last signed in</th>
+                    <th>Failed attempts</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="u : ${users}">
+                    <td class="mono" th:text="${u.username}">user</td>
+                    <td th:text="${u.fullName}">Name</td>
+                    <td>
+                        <span class="chip" th:text="${u.role.displayName}">Role</span>
+                        <span class="mono small" th:if="${u.linkedDentistCode}"
+                              th:text="${u.linkedDentistCode}"></span>
+                    </td>
+                    <td class="small" th:text="${u.email} ?: '-'">-</td>
+                    <td class="small nowrap"
+                        th:text="${u.lastLoginAt != null}
+                                 ? ${#temporals.format(u.lastLoginAt, 'dd MMM yyyy HH:mm')}
+                                 : 'never'">never</td>
+                    <td class="num" th:text="${u.failedLoginAttempts}">0</td>
+                    <td>
+                        <span class="badge badge-noshow" th:if="${u.locked}">Locked</span>
+                        <span class="badge" th:unless="${u.locked}"
+                              th:classappend="${u.active} ? 'badge-completed' : 'badge-cancelled'"
+                              th:text="${u.active} ? 'Active' : 'Deactivated'">Status</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body">
+            <p class="small muted mb-0">
+                Passwords are stored only as BCrypt hashes and are never displayed, logged or
+                recoverable. Five consecutive failures lock an account for 15 minutes; the lock is
+                time-boxed rather than permanent so that nobody can lock a colleague out of the
+                clinic by deliberately failing their sign-in. A member of staff who leaves is
+                deactivated, never deleted &mdash; their name must remain readable on the
+                appointments they created.
+            </p>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

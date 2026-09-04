@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!--
+  The reports menu. It is generated from the report factory's registry, so a
+  sixth report appears here the moment its @Component exists - this template
+  never needs editing.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('reports')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Reports</h1>
+            <div class="sub">
+                Each report answers a specific management question. The question it answers is
+                stated under its title.
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="grid grid-2">
+        <div class="card" th:each="r : ${reports}">
+            <h2 th:text="${r.title}">Report</h2>
+            <div class="card-body">
+                <p th:text="${r.description}">Description</p>
+                <div class="btn-row">
+                    <a class="btn btn-primary" th:href="@{'/reports/' + ${r.code}}">Generate</a>
+                    <span class="chip mono" th:text="${r.code}">CODE</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <h2>Also available through the web service</h2>
+        <div class="card-body">
+            <p class="mb-0 small">
+                Every one of these reports is also published at
+                <span class="mono">GET /api/v1/reports/{reportCode}</span>, which is how the
+                desktop client renders them. One report generator, one envelope, three consumers:
+                this web page, the desktop client and any future integration.
+                See the <a th:href="@{/swagger-ui.html}">API documentation</a>.
+            </p>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

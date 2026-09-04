@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!--
+  Requirement 4, step two - "Print the patient bill/receipt".
+
+  The receipt text is rendered on the SERVER by ReceiptPrinter, in a 48-column
+  monospaced layout, and simply displayed here. The desktop client requests the
+  identical text from /api/v1/invoices/{no}/receipt, so the two front ends can
+  never print different receipts for the same bill.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('billing')}"></nav>
+
+<main class="page">
+
+    <div class="page-head no-print">
+        <div>
+            <h1>Receipt</h1>
+            <div class="sub">
+                Bill <span class="mono" th:text="${invoice.invoiceNumber}">INV</span>
+                for <span th:text="${invoice.patientName}">patient</span>
+            </div>
+        </div>
+        <div class="actions">
+            <button class="btn btn-primary" onclick="window.print()">Print this receipt</button>
+            <a class="btn btn-secondary"
+               th:href="@{'/invoices/' + ${invoice.invoiceNumber} + '/receipt.txt'}">
+                Download as text</a>
+            <a class="btn btn-secondary"
+               th:href="@{'/invoices/' + ${invoice.invoiceNumber}}">Back to bill</a>
+        </div>
+    </div>
+
+    <pre class="receipt" th:text="${receiptText}">receipt</pre>
+
+    <p class="small muted mt-2 no-print">
+        The layout is 48 characters wide, which is what an 80&nbsp;mm counter-top thermal printer
+        accepts. Downloading the text file and sending it to such a printer produces exactly this
+        output.
+    </p>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

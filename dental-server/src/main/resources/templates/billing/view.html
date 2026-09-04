@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<!-- An issued bill: the itemised breakdown, and taking payment against it. -->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('billing')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1><span class="mono" th:text="${invoice.invoiceNumber}">INV-2026-000001</span></h1>
+            <div class="sub">
+                <span class="badge" th:classappend="${invoice.paymentStatus.cssClass}"
+                      th:text="${invoice.paymentStatus.displayName}">Status</span>
+                &nbsp; Issued by <span th:text="${invoice.issuedBy}">user</span>
+                on <span th:text="${#temporals.format(invoice.issuedAt, 'dd MMM yyyy HH:mm')}">date</span>
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-primary"
+               th:href="@{'/invoices/' + ${invoice.invoiceNumber} + '/receipt'}">Print receipt</a>
+            <a class="btn btn-secondary"
+               th:href="@{'/invoices/' + ${invoice.invoiceNumber} + '/receipt.txt'}">Download (.txt)</a>
+            <a class="btn btn-secondary"
+               th:href="@{'/appointments/' + ${invoice.appointmentNumber}}">Appointment</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="grid grid-2">
+
+        <!-- ============ WHO AND WHAT ============ -->
+        <div class="card">
+            <h2>Bill to</h2>
+            <div class="card-body">
+                <dl class="detail">
+                    <dt>Patient</dt>
+                    <dd th:text="${invoice.patientName}">Name</dd>
+                    <dt>Address</dt>
+                    <dd th:text="${invoice.patientAddress}">Address</dd>
+                    <dt>Contact</dt>
+                    <dd class="mono" th:text="${invoice.patientContact}">Contact</dd>
+                    <dt>Appointment</dt>
+                    <dd class="mono" th:text="${invoice.appointmentNumber}">APT</dd>
+                    <dt>Visit date</dt>
+                    <dd th:text="${#temporals.format(invoice.appointmentDate, 'dd MMM yyyy')}">Date</dd>
+                    <dt>Dentist</dt>
+                    <dd th:text="'Dr ' + ${invoice.dentistName}">Dentist</dd>
+                    <dt>Treatment</dt>
+                    <dd th:text="${invoice.treatmentName}">Treatment</dd>
+                    <dt>Pricing rule</dt>
+                    <dd><span class="chip" th:text="${invoice.pricingStrategyApplied}">STANDARD</span></dd>
+                </dl>
+
+                <p class="small muted mt-2 mb-0">
+                    These details are the copy taken when the bill was issued. If the patient later
+                    changes address, this historic bill deliberately does not change with it.
+                </p>
+            </div>
+        </div>
+
+        <!-- ============ THE MONEY ============ -->
+        <div class="card">
+            <h2>Amount</h2>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th class="num">Amount</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="line : ${invoice.lines}">
+                        <td th:text="${line.description}">Line</td>
+                        <td class="num"
+                            th:text="${#numbers.formatDecimal(line.lineTotal, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    </tr>
+                    <tr style="border-top:2px solid var(--slate-300); background: var(--teal-050);">
+                        <th style="font-size:1rem;">TOTAL PAYABLE</th>
+                        <td class="num" style="font-size:1.05rem; font-weight:700;"
+                            th:text="${currencySymbol} + ' ' +
+                                     ${#numbers.formatDecimal(invoice.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    </tr>
+                    <tr>
+                        <th>Paid so far</th>
+                        <td class="num"
+                            th:text="${#numbers.formatDecimal(invoice.amountPaid, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    </tr>
+                    <tr>
+                        <th>Balance due</th>
+                        <td class="num" style="font-weight:700;"
+                            th:classappend="${invoice.balanceDue.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'num' : 'num'"
+                            th:text="${currencySymbol} + ' ' +
+                                     ${#numbers.formatDecimal(invoice.balanceDue, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body" th:if="${invoice.discountReason}">
+                <div class="alert alert-info mb-0">
+                    <strong>Discount applied</strong>
+                    <span th:text="${invoice.discountReason}"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ PAYMENT ============ -->
+    <div class="card no-print"
+         th:if="${invoice.paymentStatus.name() != 'PAID' and invoice.paymentStatus.name() != 'CANCELLED'}">
+        <h2>Record a payment</h2>
+        <div class="card-body">
+            <form th:action="@{'/invoices/' + ${invoice.invoiceNumber} + '/payment'}"
+                  method="post" class="filters">
+                <div class="field">
+                    <label for="amount">Amount received</label>
+                    <input type="number" id="amount" name="amount" step="0.01" min="0.01"
+                           th:max="${invoice.balanceDue}" th:value="${invoice.balanceDue}" required>
+                    <span class="help">Part payments are allowed. Over-payment is refused.</span>
+                </div>
+                <div class="field">
+                    <label for="paymentMethod">Method</label>
+                    <select id="paymentMethod" name="paymentMethod" required>
+                        <option th:each="m : ${paymentMethods}" th:value="${m}"
+                                th:text="${m.displayName}">Method</option>
+                    </select>
+                </div>
+                <div class="field" style="flex:2; min-width:200px;">
+                    <label for="reference">Reference</label>
+                    <input type="text" id="reference" name="reference"
+                           placeholder="Card approval code, claim number, ...">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-success">Record payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ VOID ============ -->
+    <div class="card no-print"
+         th:if="${invoice.paymentStatus.name() == 'PENDING'}">
+        <h2>Void this bill</h2>
+        <div class="card-body">
+            <p class="small muted" style="margin-top:0;">
+                Only an unpaid bill can be voided, and only with a reason. The action is recorded
+                against your name in the audit trail.
+            </p>
+            <form th:action="@{'/invoices/' + ${invoice.invoiceNumber} + '/cancel'}"
+                  method="post" class="filters">
+                <div class="field" style="flex:2; min-width:260px;">
+                    <label for="reason">Reason</label>
+                    <input type="text" id="reason" name="reason" required
+                           placeholder="e.g. Raised against the wrong appointment">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-danger">Void bill</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

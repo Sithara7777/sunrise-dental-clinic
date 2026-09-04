@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!--
+  The landing page. Every figure here was chosen because a practice manager can
+  act on it the same morning; counts that cannot change a decision were left
+  off deliberately.
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('dashboard')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Dashboard</h1>
+            <div class="sub">
+                <span th:text="${#temporals.format(today, 'EEEE, dd MMMM yyyy')}">Today</span>
+                &nbsp;&mdash;&nbsp;
+                Welcome back, <span th:text="${currentUserName}">staff</span>.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-primary" th:href="@{/appointments/new}">Register New Appointment</a>
+            <a class="btn btn-secondary" th:href="@{/appointments/day}">Today's Schedule</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============ TODAY ============ -->
+    <div class="grid grid-4">
+        <div class="tile">
+            <div class="label">Appointments today</div>
+            <div class="value" th:text="${stats.todayAppointments}">0</div>
+            <div class="hint">
+                <span th:text="${stats.todayPending}">0</span> still to be seen
+            </div>
+        </div>
+        <div class="tile">
+            <div class="label">Completed today</div>
+            <div class="value" th:text="${stats.todayCompleted}">0</div>
+            <div class="hint">
+                <span th:text="${stats.todayCancelled}">0</span> cancelled
+            </div>
+        </div>
+        <div class="tile money">
+            <div class="label">Invoiced today</div>
+            <div class="value">
+                <span class="small muted" th:text="${currencySymbol}">Rs.</span>
+                <span th:text="${#numbers.formatDecimal(stats.todayRevenue, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+            </div>
+            <div class="hint">
+                Month to date:
+                <span th:text="${currencySymbol} + ' ' + ${#numbers.formatDecimal(stats.monthRevenue, 1, 'COMMA', 2, 'POINT')}">0</span>
+            </div>
+        </div>
+        <div class="tile"
+             th:classappend="${stats.outstandingBalance.compareTo(T(java.math.BigDecimal).ZERO) > 0} ? 'alert' : 'money'">
+            <div class="label">Outstanding</div>
+            <div class="value">
+                <span class="small muted" th:text="${currencySymbol}">Rs.</span>
+                <span th:text="${#numbers.formatDecimal(stats.outstandingBalance, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+            </div>
+            <div class="hint">
+                across <span th:text="${stats.outstandingInvoiceCount}">0</span> unpaid bills
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ OPERATIONAL INDICATORS ============ -->
+    <div class="grid grid-4 mt-2">
+        <div class="tile">
+            <div class="label">Next 7 days</div>
+            <div class="value" th:text="${stats.upcomingSevenDays}">0</div>
+            <div class="hint">appointments booked</div>
+        </div>
+        <div class="tile">
+            <div class="label">Registered patients</div>
+            <div class="value" th:text="${stats.totalPatients}">0</div>
+            <div class="hint">
+                <span th:text="${stats.newPatientsThisMonth}">0</span> new this month
+            </div>
+        </div>
+        <div class="tile"
+             th:classappend="${stats.noShowRate.compareTo(new java.math.BigDecimal('10')) > 0} ? 'warn' : ''">
+            <div class="label">No-show rate</div>
+            <div class="value"><span th:text="${stats.noShowRate}">0</span>%</div>
+            <div class="hint">every missed slot is unsold chair time</div>
+        </div>
+        <div class="tile">
+            <div class="label">Chair utilisation today</div>
+            <div class="value"><span th:text="${stats.chairUtilisationToday}">0</span>%</div>
+            <div class="hint">
+                <span th:text="${stats.activeDentists}">0</span> dentists practising
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-2 mt-2">
+
+        <!-- ============ WEEKLY TREND ============ -->
+        <div class="card">
+            <h2>Appointments, last seven days</h2>
+            <div class="card-body">
+                <div class="trend">
+                    <div class="bar-wrap" th:each="point : ${stats.weeklyTrend}">
+                        <span class="bar-value" th:text="${point.value}">0</span>
+                        <div class="bar-outer">
+                            <div class="bar"
+                                 th:style="'height:' + ${#numbers.formatInteger(point.value * 100 / trendPeak, 1)} + '%'"></div>
+                        </div>
+                        <span class="bar-label" th:text="${point.label}">Mon</span>
+                    </div>
+                </div>
+                <p class="small muted mt-1 mb-0">
+                    Bars are scaled against the busiest day in the window
+                    (<span th:text="${trendPeak}">0</span> appointments).
+                </p>
+            </div>
+        </div>
+
+        <!-- ============ RECENTLY VIEWED (session) ============ -->
+        <div class="card">
+            <h2>Your recent activity</h2>
+            <div class="card-body">
+                <div th:if="${recentlyViewed == null or recentlyViewed.isEmpty()}" class="muted small">
+                    Appointments you open will be listed here for the rest of this session.
+                </div>
+                <div class="chips" th:unless="${recentlyViewed == null or recentlyViewed.isEmpty()}">
+                    <a class="chip" th:each="entry : ${recentlyViewed}"
+                       th:href="@{'/appointments/' + ${entry.appointmentNumber}}">
+                        <span class="mono" th:text="${entry.appointmentNumber}">APT</span>
+                        &mdash; <span th:text="${entry.patientName}">Patient</span>
+                    </a>
+                </div>
+                <p class="small muted mt-2 mb-0">
+                    This trail lives in your server-side session only. It is not stored in the
+                    database and disappears when you sign out.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ TODAY'S SCHEDULE ============ -->
+    <div class="card">
+        <h2>Today's schedule</h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Appointment No</th>
+                    <th>Patient</th>
+                    <th>Contact</th>
+                    <th>Dentist</th>
+                    <th>Treatment</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="a : ${todaySchedule}">
+                    <td class="nowrap" th:text="${#temporals.format(a.appointmentTime, 'HH:mm')}">09:00</td>
+                    <td class="mono" th:text="${a.appointmentNumber}">APT-2026-000001</td>
+                    <td th:text="${a.patientName}">Patient</td>
+                    <td class="mono" th:text="${a.contactNumber}">0771234567</td>
+                    <td th:text="'Dr ' + ${a.dentistName}">Dr</td>
+                    <td th:text="${a.treatmentName}">Treatment</td>
+                    <td>
+                        <span class="badge" th:classappend="${a.status.cssClass}"
+                              th:text="${a.status.displayName}">Scheduled</span>
+                    </td>
+                    <td class="right">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/appointments/' + ${a.appointmentNumber}}">Open</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(todaySchedule)}">
+                    <td colspan="8" class="empty">
+                        No appointments are booked for today.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

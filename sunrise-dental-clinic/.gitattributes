@@ -1,0 +1,31 @@
+# =========================================================================
+#  Normalises line endings across contributors' machines.
+#
+#  This project is developed on Windows but built by GitHub Actions on
+#  ubuntu-latest. Without this file, Windows checks files out with CRLF,
+#  Linux CI checks the same blobs out with LF, and `git diff` on either side
+#  fills with whitespace-only noise that hides the real change. Text files are
+#  normalised to LF in the repository and re-expanded per the platform on
+#  checkout; genuinely binary files are marked so Git never tries to diff or
+#  translate them at all.
+# =========================================================================
+
+* text=auto eol=lf
+
+*.java   text
+*.xml    text
+*.yml    text
+*.yaml   text
+*.sql    text
+*.md     text
+*.html   text
+*.css    text
+*.js     text
+*.properties text
+*.gitattributes text
+*.gitignore text
+
+*.jar    binary
+*.png    binary
+*.jpg    binary
+*.ico    binary

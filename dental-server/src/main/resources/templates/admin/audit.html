@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<!--
+  The audit trail.
+
+  Rows arrive from two independent sources: the application's observer pipeline
+  (which knows WHICH MEMBER OF STAFF acted) and the database triggers (which
+  catch changes made outside the application altogether). The Source column
+  distinguishes them.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('admin')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Audit Trail</h1>
+            <div class="sub">Who did what, and when. Append-only &mdash; entries are never edited
+                or deleted.</div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/admin/notifications}">Notification history</a>
+            <a class="btn btn-secondary" th:href="@{/admin/users}">Staff accounts</a>
+            <a class="btn btn-secondary" th:href="@{/admin/system}">System diagnostics</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="card">
+        <h2>Filter</h2>
+        <div class="card-body">
+            <form th:action="@{/admin/audit}" method="get" class="filters">
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" th:value="${username}"
+                           placeholder="e.g. reception">
+                </div>
+                <div class="field" style="flex:2; min-width:220px;">
+                    <label for="action">Action contains</label>
+                    <input type="text" id="action" name="action" th:value="${action}"
+                           placeholder="LOGIN, APPOINTMENT, INVOICE, ...">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <a class="btn btn-secondary" th:href="@{/admin/audit}">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Entries
+            <span class="muted small" th:text="'(' + ${entries.totalElements} + ')'">(0)</span></h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>When</th>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Entity</th>
+                    <th>Details</th>
+                    <th>Source</th>
+                    <th>IP</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="e : ${entries.content}">
+                    <td class="nowrap small"
+                        th:text="${#temporals.format(e.occurredAt, 'dd MMM HH:mm:ss')}">When</td>
+                    <td th:text="${e.username}">user</td>
+                    <td class="mono small" th:text="${e.action}">ACTION</td>
+                    <td class="mono small">
+                        <span th:text="${e.entityType}">TYPE</span>
+                        <span th:if="${e.entityKey}" th:text="' ' + ${e.entityKey}"></span>
+                    </td>
+                    <td class="small" th:text="${e.details}">details</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${e.source == 'DB_TRIGGER'} ? 'badge-scheduled' : 'badge-confirmed'"
+                              th:text="${e.source == 'DB_TRIGGER'} ? 'Database' : 'Application'">Source</span>
+                    </td>
+                    <td class="mono small" th:text="${e.ipAddress} ?: '-'">-</td>
+                </tr>
+                <tr th:if="${entries.isEmpty()}">
+                    <td colspan="7" class="empty">No audit entries match.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager" th:if="${entries.totalPages > 1}">
+            <a class="btn btn-sm btn-secondary" th:unless="${entries.first}"
+               th:href="@{/admin/audit(username=${username}, action=${action}, page=${entries.number - 1})}">Previous</a>
+            <span class="current">
+                Page <span th:text="${entries.number + 1}">1</span>
+                of <span th:text="${entries.totalPages}">1</span>
+            </span>
+            <a class="btn btn-sm btn-secondary" th:unless="${entries.last}"
+               th:href="@{/admin/audit(username=${username}, action=${action}, page=${entries.number + 1})}">Next</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Why there are two sources</h2>
+        <div class="card-body">
+            <p class="mb-0 small">
+                <strong>Application</strong> entries are written by the observer pipeline and know
+                which member of staff performed the action &mdash; something the database has no
+                concept of. <strong>Database</strong> entries are written by the
+                <span class="mono">trg_appointment_audit</span> and
+                <span class="mono">trg_invoice_payment_audit</span> triggers and fire for
+                <em>any</em> change to those tables, including one made over a SQL console or by a
+                maintenance script. Together they answer both "who did this?" and "what changed?".
+            </p>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

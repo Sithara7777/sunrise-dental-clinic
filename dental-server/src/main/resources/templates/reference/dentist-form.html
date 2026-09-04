@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('dentists')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1 th:text="${editing} ? 'Edit Dentist' : 'Add Dentist'">Dentist</h1>
+            <div class="sub">
+                The consultation fee entered here is charged on every bill this dentist generates.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/dentists}">Back to roster</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <form th:action="@{/dentists}" th:object="${dentist}" method="post">
+        <input type="hidden" th:field="*{dentistCode}">
+        <input type="hidden" th:field="*{id}">
+
+        <fieldset>
+            <legend>Dentist details</legend>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="fullName">Full name <span class="req">*</span></label>
+                    <input type="text" id="fullName" th:field="*{fullName}" required
+                           placeholder="Nimal Perera"
+                           th:classappend="${#fields.hasErrors('fullName')} ? 'invalid'">
+                    <span class="help">Do not type "Dr" &mdash; the system adds it.</span>
+                    <span class="err" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                </div>
+                <div class="field">
+                    <label for="specialization">Specialization <span class="req">*</span></label>
+                    <input type="text" id="specialization" th:field="*{specialization}" required
+                           placeholder="General Dentistry"
+                           th:classappend="${#fields.hasErrors('specialization')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('specialization')}"
+                          th:errors="*{specialization}"></span>
+                </div>
+                <div class="field">
+                    <label for="contactNumber">Contact number <span class="req">*</span></label>
+                    <input type="tel" id="contactNumber" th:field="*{contactNumber}" required
+                           th:classappend="${#fields.hasErrors('contactNumber')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('contactNumber')}"
+                          th:errors="*{contactNumber}"></span>
+                </div>
+                <div class="field">
+                    <label for="email">E-mail address</label>
+                    <input type="email" id="email" th:field="*{email}"
+                           th:classappend="${#fields.hasErrors('email')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                </div>
+                <div class="field">
+                    <label for="consultationFee">Consultation fee (LKR) <span class="req">*</span></label>
+                    <input type="number" id="consultationFee" th:field="*{consultationFee}"
+                           step="0.01" min="0" required
+                           th:classappend="${#fields.hasErrors('consultationFee')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('consultationFee')}"
+                          th:errors="*{consultationFee}"></span>
+                </div>
+                <div class="field">
+                    <label for="slmcRegistrationNo">SLMC registration number</label>
+                    <input type="text" id="slmcRegistrationNo" th:field="*{slmcRegistrationNo}"
+                           placeholder="SLMC/D/2009/1142">
+                </div>
+                <div class="field">
+                    <label for="active">Status</label>
+                    <select id="active" th:field="*{active}">
+                        <option th:value="true">Practising</option>
+                        <option th:value="false">Retired</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="btn-row">
+            <button type="submit" class="btn btn-primary"
+                    th:text="${editing} ? 'Save changes' : 'Add dentist'">Save</button>
+            <a class="btn btn-secondary" th:href="@{/dentists}">Cancel</a>
+        </div>
+    </form>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

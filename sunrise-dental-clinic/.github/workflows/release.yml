@@ -1,0 +1,115 @@
+# =========================================================================
+#  CONTINUOUS DELIVERY - Sunrise Dental Clinic Management System
+#  CIS6003 Advanced Programming - WRIT1, Task D
+# =========================================================================
+#  Triggered by pushing a version tag (v1.0.0, v1.1.0, ...). It rebuilds from
+#  the tag, runs the full test suite again, and publishes a GitHub Release
+#  carrying both executable jars.
+#
+#  Why a separate workflow from CI: CI answers "is this change safe?" and runs
+#  constantly; delivery answers "make this exact commit available to the
+#  clinic" and must be a deliberate, traceable act. Tying it to an annotated
+#  tag means every release maps to one immutable commit, which is what makes a
+#  deployed version auditable months later.
+#
+#  The tests are re-run here rather than trusted from the CI run, because a tag
+#  can be moved and CI may have passed on a different tree.
+# =========================================================================
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. v1.0.0'
+        required: true
+
+permissions:
+  contents: write        # required to create the release and upload assets
+
+jobs:
+  release:
+    name: Build and publish the release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history, so release notes can diff against the previous tag
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: maven
+
+      - name: Determine the version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Releasing $VERSION"
+
+      - name: Build and run the full test suite
+        run: mvn --batch-mode --no-transfer-progress clean verify
+
+      - name: Rename the artefacts to carry the version
+        run: |
+          V="${{ steps.version.outputs.version }}"
+          mkdir -p release
+          cp dental-server/target/sunrise-dental-server.jar "release/sunrise-dental-server-$V.jar"
+          cp dental-client/target/sunrise-dental-client.jar "release/sunrise-dental-client-$V.jar"
+          ls -lh release/
+
+      - name: Generate the release notes
+        id: notes
+        run: |
+          PREVIOUS=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          {
+            echo "## Sunrise Dental Clinic Management System ${{ steps.version.outputs.version }}"
+            echo ""
+            echo "### How to run"
+            echo ""
+            echo '```bash'
+            echo "# 1. Start the server (needs a JDK 17 or newer; no database to install)"
+            echo "java -jar sunrise-dental-server-${{ steps.version.outputs.version }}.jar"
+            echo ""
+            echo "#    Then open http://localhost:8080/login"
+            echo ""
+            echo "# 2. Start the menu-driven desktop client, on this or any other machine"
+            echo "java -jar sunrise-dental-client-${{ steps.version.outputs.version }}.jar http://<server-host>:8080"
+            echo '```'
+            echo ""
+            if [ -n "$PREVIOUS" ]; then
+              echo "### Changes since $PREVIOUS"
+              echo ""
+              git log --pretty=format:'* %s (%h)' "$PREVIOUS"..HEAD
+            else
+              echo "### Changes"
+              echo ""
+              git log --pretty=format:'* %s (%h)'
+            fi
+          } > RELEASE_NOTES.md
+          cat RELEASE_NOTES.md
+
+      - name: Publish the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Sunrise Dental Clinic ${{ steps.version.outputs.version }}
+          body_path: RELEASE_NOTES.md
+          draft: false
+          prerelease: false
+          files: |
+            release/sunrise-dental-server-${{ steps.version.outputs.version }}.jar
+            release/sunrise-dental-client-${{ steps.version.outputs.version }}.jar

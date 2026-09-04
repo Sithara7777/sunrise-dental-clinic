@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<!--
+  ONE template renders ALL FIVE reports.
+
+  It is able to because every report returns the same ReportDto envelope:
+  column headings, pre-rendered cells and a set of named totals. The template
+  never mentions a report by name, so a sixth report is displayed here the
+  moment its generator exists.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('reports')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1 th:text="${report != null} ? ${report.title} : 'Report'">Report</h1>
+            <div class="sub" th:if="${report != null}" th:text="${report.description}">Description</div>
+        </div>
+        <div class="actions no-print">
+            <button class="btn btn-primary" onclick="window.print()">Print</button>
+            <a class="btn btn-secondary" th:href="@{/reports}">All reports</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============ PARAMETERS ============ -->
+    <div class="card no-print">
+        <h2>Report period</h2>
+        <div class="card-body">
+            <form th:action="@{'/reports/' + ${reportCode}}" method="get" class="filters">
+                <div class="field">
+                    <label for="fromDate">From</label>
+                    <input type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+                </div>
+                <div class="field">
+                    <label for="toDate">To</label>
+                    <input type="date" id="toDate" name="toDate" th:value="${toDate}">
+                </div>
+                <div class="field" th:if="${reportCode == 'DAILY_SCHEDULE'}">
+                    <label for="dentistCode">Dentist</label>
+                    <select id="dentistCode" name="dentistCode">
+                        <option value="">All dentists</option>
+                        <option th:each="d : ${dentists}" th:value="${d.dentistCode}"
+                                th:text="'Dr ' + ${d.fullName}"
+                                th:selected="${dentistCode == d.dentistCode}">Dentist</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">Generate</button>
+                </div>
+            </form>
+            <p class="small muted mt-1 mb-0">
+                Dates default to the current month. The maximum range is one year.
+                The debtor ageing report ignores the dates on purpose &mdash; a four-month-old
+                unpaid bill is exactly what it exists to surface.
+            </p>
+        </div>
+    </div>
+
+    <div th:if="${report != null}">
+
+        <!-- ============ HEADER ============ -->
+        <div class="card">
+            <h2>Summary</h2>
+            <div class="card-body">
+                <p class="small muted" style="margin-top:0;">
+                    Period
+                    <strong th:text="${#temporals.format(report.fromDate, 'dd MMM yyyy')}">from</strong>
+                    to
+                    <strong th:text="${#temporals.format(report.toDate, 'dd MMM yyyy')}">to</strong>
+                    &nbsp;|&nbsp; generated
+                    <span th:text="${#temporals.format(report.generatedAt, 'dd MMM yyyy HH:mm')}">now</span>
+                    by <span th:text="${report.generatedBy}">user</span>
+                    &nbsp;|&nbsp; <span th:text="${report.rowCount}">0</span> rows
+                </p>
+
+                <div class="summary-list">
+                    <div class="summary-item" th:each="entry : ${report.summary}">
+                        <div class="k" th:text="${entry.key}">Key</div>
+                        <div class="v" th:text="${entry.value}">Value</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============ DATA ============ -->
+        <div class="card">
+            <h2 th:text="${report.title}">Report</h2>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr>
+                        <th th:each="header : ${report.columnHeaders}" th:text="${header}">Column</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="row : ${report.cells}">
+                        <td th:each="cell : ${row}" th:text="${cell}">value</td>
+                    </tr>
+                    <tr th:if="${report.empty}">
+                        <td th:attr="colspan=${#lists.size(report.columnHeaders)}" class="empty">
+                            No data for this period.
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <p class="small muted no-print">
+            This report is produced by a Template Method generator reading a database view; the
+            ageing bands and the invoice-total formula come from stored functions, so this page, an
+            accountant's own SQL query and the printed receipt cannot disagree.
+        </p>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head th:replace="~{fragments/layout :: head('Access denied')}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}" sec:authorize="isAuthenticated()"></div>
+<nav th:replace="~{fragments/layout :: nav('')}" sec:authorize="isAuthenticated()"></nav>
+
+<main class="page">
+
+    <div class="card" style="max-width:680px; margin: 2rem auto;">
+        <h2>Access denied</h2>
+        <div class="card-body">
+            <p style="font-size:1.02rem;" th:text="${errorMessage}">
+                Your role does not permit that action.
+            </p>
+            <p class="muted small">
+                You are signed in as
+                <strong th:text="${currentUserName}">user</strong>
+                (<span th:text="${currentUserRole}">role</span>).
+                Reference-data maintenance and the audit trail are restricted to administrators;
+                billing is restricted to administrators and receptionists.
+            </p>
+            <div class="btn-row">
+                <a class="btn btn-primary" th:href="@{/dashboard}">Back to dashboard</a>
+                <a class="btn btn-secondary" th:href="@{/help}">Help</a>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

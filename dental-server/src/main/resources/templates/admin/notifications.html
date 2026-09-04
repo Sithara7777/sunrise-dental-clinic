@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+  Proof of every alert the system attempted, successful or not.
+
+  Failures are recorded as well as successes on purpose: "we sent you a
+  reminder" is only defensible if there is a row proving it, and a run of
+  FAILED rows is how the clinic discovers its SMS credit has run out.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('admin')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Notification History</h1>
+            <div class="sub">Every e-mail and SMS the system attempted to send.</div>
+        </div>
+        <div class="actions">
+            <form th:action="@{/admin/notifications/run-reminders}" method="post"
+                  style="display:inline;">
+                <button type="submit" class="btn btn-primary">Send tomorrow's reminders now</button>
+            </form>
+            <a class="btn btn-secondary" th:href="@{/admin/audit}">Audit trail</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="alert alert-info">
+        <strong>Development mode</strong>
+        E-mail is delivered by the console gateway: messages are recorded here and written to the
+        application log, but not transmitted. SMS is simulated - numbers are normalised to E.164 and
+        validated exactly as a real aggregator would, so failures are genuine. Set
+        <span class="mono">clinic.notifications.smtp-enabled=true</span> to send real e-mail.
+    </div>
+
+    <div class="card">
+        <h2>Messages
+            <span class="muted small" th:text="'(' + ${entries.totalElements} + ')'">(0)</span></h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>When</th>
+                    <th>Channel</th>
+                    <th>Recipient</th>
+                    <th>Reference</th>
+                    <th>Subject / message</th>
+                    <th>Status</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="n : ${entries.content}">
+                    <td class="nowrap small"
+                        th:text="${#temporals.format(n.createdAt, 'dd MMM HH:mm')}">When</td>
+                    <td>
+                        <span class="chip" th:text="${n.channel.displayName}">Channel</span>
+                    </td>
+                    <td class="mono small" th:text="${n.recipient}">recipient</td>
+                    <td class="mono small" th:text="${n.referenceKey} ?: '-'">-</td>
+                    <td class="small">
+                        <strong th:if="${n.subject}" th:text="${n.subject}">Subject</strong>
+                        <div th:text="${#strings.abbreviate(n.body, 160)}">body</div>
+                        <div class="muted" th:if="${n.failureReason}"
+                             th:text="${n.failureReason}">reason</div>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${n.status.name() == 'SENT'} ? 'badge-completed'
+                                              : (${n.status.name() == 'FAILED'} ? 'badge-noshow' : 'badge-cancelled')"
+                              th:text="${n.status.displayName}">Status</span>
+                    </td>
+                </tr>
+                <tr th:if="${entries.isEmpty()}">
+                    <td colspan="6" class="empty">
+                        No notifications have been sent yet. Register an appointment, or use
+                        "Send tomorrow's reminders now" above.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager" th:if="${entries.totalPages > 1}">
+            <a class="btn btn-sm btn-secondary" th:unless="${entries.first}"
+               th:href="@{/admin/notifications(page=${entries.number - 1})}">Previous</a>
+            <span class="current">
+                Page <span th:text="${entries.number + 1}">1</span>
+                of <span th:text="${entries.totalPages}">1</span>
+            </span>
+            <a class="btn btn-sm btn-secondary" th:unless="${entries.last}"
+               th:href="@{/admin/notifications(page=${entries.number + 1})}">Next</a>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
