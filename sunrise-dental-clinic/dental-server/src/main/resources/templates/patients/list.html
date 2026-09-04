@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('patients')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Patients</h1>
+            <div class="sub">
+                One patient, one record. Always search here before registering somebody as new.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-primary" th:href="@{/patients/new}">Register Patient</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="card">
+        <h2>Search</h2>
+        <div class="card-body">
+            <form th:action="@{/patients}" method="get" class="filters">
+                <div class="field" style="flex:3; min-width:280px;">
+                    <label for="term">Name, patient number, telephone number or NIC</label>
+                    <input type="text" id="term" name="term" th:value="${term}" autofocus
+                           placeholder="e.g. Perera, PAT-000042, 0771234567 or 901234567V">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <a class="btn btn-secondary" th:href="@{/patients}">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Results
+            <span class="muted small" th:text="'(' + ${results.totalElements} + ')'">(0)</span></h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Patient No</th>
+                    <th>Name</th>
+                    <th>Contact</th>
+                    <th>Address</th>
+                    <th>NIC</th>
+                    <th>Age</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${results.content}">
+                    <td class="mono" th:text="${p.patientCode}">PAT</td>
+                    <td th:text="${p.fullName}">Name</td>
+                    <td class="mono" th:text="${p.contactNumber}">Contact</td>
+                    <td th:text="${p.address}">Address</td>
+                    <td class="mono" th:text="${p.nic} ?: '-'">-</td>
+                    <td th:text="${p.dateOfBirth != null}
+                                 ? ${T(java.time.Period).between(p.dateOfBirth, T(java.time.LocalDate).now()).getYears()}
+                                 : '-'">-</td>
+                    <td class="right nowrap">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/patients/' + ${p.patientCode}}">Open</a>
+                        <a class="btn btn-sm btn-primary"
+                           th:href="@{/appointments/new(patientCode=${p.patientCode})}">Book</a>
+                    </td>
+                </tr>
+                <tr th:if="${results.empty}">
+                    <td colspan="7" class="empty">
+                        No patients match. If this really is a new patient, use
+                        <strong>Register Patient</strong> &mdash; or simply book their appointment,
+                        which registers them at the same time.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager" th:if="${results.totalPages > 1}">
+            <a class="btn btn-sm btn-secondary" th:unless="${results.first}"
+               th:href="@{/patients(term=${term}, page=${results.page - 1})}">Previous</a>
+            <span class="current">
+                Page <span th:text="${results.page + 1}">1</span>
+                of <span th:text="${results.totalPages}">1</span>
+            </span>
+            <a class="btn btn-sm btn-secondary" th:unless="${results.last}"
+               th:href="@{/patients(term=${term}, page=${results.page + 1})}">Next</a>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

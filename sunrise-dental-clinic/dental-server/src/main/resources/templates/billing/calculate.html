@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!--
+  Requirement 4, step one - "Calculate the total treatment cost based on
+  treatment type and consultation fee".
+
+  Nothing on this page is saved. The receptionist can change the discount and
+  recalculate as often as they like; only "Issue bill" commits it and consumes
+  a bill number. That is what stops mis-priced bills being issued and then
+  having to be voided.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('billing')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Calculate Bill</h1>
+            <div class="sub">
+                Appointment <span class="mono" th:text="${appointmentNumber}">APT</span>
+                &mdash; nothing is saved until you click <em>Issue bill</em>.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary"
+               th:href="@{'/appointments/' + ${appointmentNumber}}">Back to appointment</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div th:if="${preview != null}">
+
+        <div class="grid grid-2">
+
+            <!-- ============ ADJUST ============ -->
+            <div class="card">
+                <h2>Adjust and recalculate</h2>
+                <div class="card-body">
+                    <form th:action="@{'/billing/calculate/' + ${appointmentNumber}}" method="get">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label for="discountPercentage">Discount %</label>
+                                <input type="number" id="discountPercentage" name="discountPercentage"
+                                       min="0" max="50" step="0.5"
+                                       th:value="${discountPercentage}">
+                                <span class="help">
+                                    Maximum 50%. Automatic age concessions are applied for you and
+                                    do not need entering here.
+                                </span>
+                            </div>
+                            <div class="field">
+                                <label for="discountReason">Reason</label>
+                                <input type="text" id="discountReason" name="discountReason"
+                                       th:value="${discountReason}"
+                                       placeholder="Who approved it, and why">
+                            </div>
+                        </div>
+                        <div class="btn-row">
+                            <button type="submit" class="btn btn-secondary">Recalculate</button>
+                        </div>
+                    </form>
+
+                    <hr style="border:none; border-top:1px solid var(--slate-100); margin:1.1rem 0;">
+
+                    <form th:action="@{/billing/issue}" method="post">
+                        <input type="hidden" name="appointmentNumber" th:value="${appointmentNumber}">
+                        <input type="hidden" name="discountPercentage" th:value="${discountPercentage}">
+                        <input type="hidden" name="discountReason" th:value="${discountReason}">
+                        <div class="field">
+                            <label for="remarks">Remarks on the bill</label>
+                            <input type="text" id="remarks" name="remarks" placeholder="Optional">
+                        </div>
+                        <div class="btn-row">
+                            <button type="submit" class="btn btn-success">
+                                Issue bill &mdash;
+                                <span th:text="${currencySymbol} + ' ' +
+                                      ${#numbers.formatDecimal(preview.totalAmount, 1, 'COMMA', 2, 'POINT')}"></span>
+                            </button>
+                        </div>
+                        <p class="small muted mb-0">
+                            Once issued, a bill can be reprinted but not re-created. There is one
+                            bill per appointment, enforced by the database.
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ============ HOW THE TOTAL WAS REACHED ============ -->
+            <div class="card">
+                <h2>How this total was calculated</h2>
+                <div class="card-body">
+                    <dl class="detail">
+                        <dt>Patient</dt>
+                        <dd th:text="${preview.patientName}">Patient</dd>
+                        <dt>Dentist</dt>
+                        <dd th:text="'Dr ' + ${preview.dentistName}">Dentist</dd>
+                        <dt>Treatment</dt>
+                        <dd th:text="${preview.treatmentName}">Treatment</dd>
+                        <dt>Pricing rule</dt>
+                        <dd>
+                            <span class="chip" th:text="${preview.pricingStrategyApplied}">STANDARD</span>
+                        </dd>
+                    </dl>
+
+                    <table class="data mt-2">
+                        <thead>
+                        <tr>
+                            <th>Description</th>
+                            <th class="num">Amount</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="line : ${preview.lines}">
+                            <td th:text="${line.description}">Line</td>
+                            <td class="num"
+                                th:text="${#numbers.formatDecimal(line.lineTotal, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                        </tr>
+                        <tr style="border-top:2px solid var(--slate-300);">
+                            <th>Sub-total</th>
+                            <td class="num"
+                                th:text="${#numbers.formatDecimal(preview.subTotal, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                        </tr>
+                        <tr th:if="${preview.discountAmount.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                            <th th:text="'Discount (' + ${preview.discountPercentage} + '%)'">Discount</th>
+                            <td class="num"
+                                th:text="'-' + ${#numbers.formatDecimal(preview.discountAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                        </tr>
+                        <tr>
+                            <th>Taxable amount</th>
+                            <td class="num"
+                                th:text="${#numbers.formatDecimal(preview.taxableAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                        </tr>
+                        <tr>
+                            <th th:text="'VAT @ ' + ${#numbers.formatDecimal(preview.taxRate.multiply(new java.math.BigDecimal(100)), 1, 0)} + '%'">VAT</th>
+                            <td class="num"
+                                th:text="${#numbers.formatDecimal(preview.taxAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                        </tr>
+                        <tr style="background: var(--teal-050);">
+                            <th style="font-size:1rem;">TOTAL PAYABLE</th>
+                            <td class="num" style="font-size:1.05rem; font-weight:700;"
+                                th:text="${currencySymbol} + ' ' +
+                                         ${#numbers.formatDecimal(preview.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="alert alert-info mt-2 mb-0" th:if="${preview.discountReason}">
+                        <strong>Concession applied</strong>
+                        <span th:text="${preview.discountReason}"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

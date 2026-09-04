@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!--
+  Requirement 1 - "The system must require a username and password for secure
+  access. Only authorized staff can use the system."
+
+  The form posts to /login, which Spring Security's filter intercepts before
+  any controller runs. The CSRF token is mandatory: without it the browser
+  chain rejects the post, which is what stops a hostile page signing a
+  receptionist in or out behind their back.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head('Sign in')}"></head>
+
+<body class="login-page">
+
+<main class="login-card">
+    <header>
+        <div class="mark">&#129463;</div>
+        <h1>Sunrise Dental Clinic</h1>
+        <p>Appointment &amp; Patient Management System</p>
+    </header>
+
+    <div class="login-body">
+
+        <div class="alert alert-error" th:if="${errorMessage}">
+            <strong>Sign-in failed</strong>
+            <span th:text="${errorMessage}"></span>
+        </div>
+        <div class="alert alert-info" th:if="${infoMessage}">
+            <span th:text="${infoMessage}"></span>
+        </div>
+
+        <form th:action="@{/login}" method="post" autocomplete="on">
+
+            <div class="field">
+                <label for="username">Username <span class="req">*</span></label>
+                <input type="text" id="username" name="username"
+                       required autofocus autocomplete="username"
+                       placeholder="e.g. reception">
+            </div>
+
+            <div class="field mt-1">
+                <label for="password">Password <span class="req">*</span></label>
+                <input type="password" id="password" name="password"
+                       required autocomplete="current-password"
+                       placeholder="Your password">
+            </div>
+
+            <div class="field mt-1" style="flex-direction: row; align-items: center; gap: .5rem;">
+                <input type="checkbox" id="remember-me" name="remember-me" style="width:auto;">
+                <label for="remember-me" style="font-weight: 400; font-size: .87rem;">
+                    Remember this device for 7 days
+                </label>
+            </div>
+            <div class="field">
+                <span class="help">
+                    Tick this only on your own machine. It stores a
+                    <code>clinic-remember-me</code> cookie on this computer.
+                </span>
+            </div>
+
+            <div class="btn-row">
+                <button type="submit" class="btn btn-primary" style="width:100%;">Sign in</button>
+            </div>
+        </form>
+
+        <!--
+          Demonstration credentials. In a live deployment this block would be
+          removed and the default passwords changed - the application logs a
+          warning while they are still in use.
+        -->
+        <div class="login-hint">
+            <strong>Demonstration accounts</strong><br>
+            Administrator &nbsp;<code>admin</code> / <code>Admin@123</code><br>
+            Receptionist &nbsp;&nbsp;<code>reception</code> / <code>Reception@123</code><br>
+            Dentist &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<code>nperera</code> / <code>Dentist@123</code>
+        </div>
+
+        <p class="small muted mt-2" style="text-align:center;">
+            New to the system? <a th:href="@{/help}">Read the step-by-step guide</a>.
+        </p>
+    </div>
+</main>
+
+</body>
+</html>

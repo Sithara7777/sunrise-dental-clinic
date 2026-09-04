@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!-- The day view a practice manager prints at 07:45. -->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('appointments')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Daily Schedule</h1>
+            <div class="sub" th:text="${#temporals.format(date, 'EEEE, dd MMMM yyyy')}">date</div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/appointments/day(date=${date.minusDays(1)})}">
+                &larr; Previous day</a>
+            <a class="btn btn-secondary" th:href="@{/appointments/day}">Today</a>
+            <a class="btn btn-secondary" th:href="@{/appointments/day(date=${date.plusDays(1)})}">
+                Next day &rarr;</a>
+            <a class="btn btn-primary"
+               th:href="@{/reports/DAILY_SCHEDULE(fromDate=${date}, toDate=${date})}">
+                Printable report</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="card">
+        <h2>
+            Appointments
+            <span class="muted small" th:text="'(' + ${#lists.size(appointments)} + ')'">(0)</span>
+        </h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Appointment No</th>
+                    <th>Patient</th>
+                    <th>Contact</th>
+                    <th>Dentist</th>
+                    <th>Treatment</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="a : ${appointments}">
+                    <td class="nowrap" th:text="${#temporals.format(a.appointmentTime, 'HH:mm')} + ' - ' +
+                                                 ${#temporals.format(a.appointmentEndTime, 'HH:mm')}">09:00</td>
+                    <td class="mono" th:text="${a.appointmentNumber}">APT</td>
+                    <td th:text="${a.patientName}">Patient</td>
+                    <td class="mono" th:text="${a.contactNumber}">Contact</td>
+                    <td th:text="'Dr ' + ${a.dentistName}">Dentist</td>
+                    <td th:text="${a.treatmentName}">Treatment</td>
+                    <td>
+                        <span class="badge" th:classappend="${a.status.cssClass}"
+                              th:text="${a.status.displayName}">Status</span>
+                    </td>
+                    <td class="right">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/appointments/' + ${a.appointmentNumber}}">Open</a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(appointments)}">
+                    <td colspan="8" class="empty">Nothing is booked for this day.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

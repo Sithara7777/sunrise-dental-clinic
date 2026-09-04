@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<!--
+  Requirement 3 - "Show complete patient and appointment information."
+  Also the launch point for requirement 4, since billing starts from a
+  completed visit.
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('appointments')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>
+                <span class="mono" th:text="${appointment.appointmentNumber}">APT-2026-000001</span>
+            </h1>
+            <div class="sub">
+                <span class="badge" th:classappend="${appointment.status.cssClass}"
+                      th:text="${appointment.status.displayName}">Status</span>
+                &nbsp;
+                Registered by <span th:text="${appointment.createdBy}">user</span>
+                on <span th:text="${#temporals.format(appointment.createdAt, 'dd MMM yyyy HH:mm')}">date</span>
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/appointments}">Back to list</a>
+            <a class="btn btn-secondary"
+               th:href="@{'/patients/' + ${appointment.patientCode}}">Patient record</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="grid grid-2">
+
+        <!-- ============ PATIENT ============ -->
+        <div class="card">
+            <h2>Patient</h2>
+            <div class="card-body">
+                <dl class="detail">
+                    <dt>Patient number</dt>
+                    <dd class="mono" th:text="${appointment.patientCode}">PAT-000001</dd>
+                    <dt>Name</dt>
+                    <dd th:text="${appointment.patientName}">Name</dd>
+                    <dt>Address</dt>
+                    <dd th:text="${appointment.address}">Address</dd>
+                    <dt>Contact number</dt>
+                    <dd class="mono" th:text="${appointment.contactNumber}">0771234567</dd>
+                    <dt>E-mail</dt>
+                    <dd th:text="${appointment.patientEmail} ?: 'Not supplied'">-</dd>
+                </dl>
+            </div>
+        </div>
+
+        <!-- ============ APPOINTMENT ============ -->
+        <div class="card">
+            <h2>Appointment</h2>
+            <div class="card-body">
+                <dl class="detail">
+                    <dt>Date</dt>
+                    <dd th:text="${#temporals.format(appointment.appointmentDate, 'EEEE, dd MMMM yyyy')}">Date</dd>
+                    <dt>Time</dt>
+                    <dd>
+                        <span th:text="${#temporals.format(appointment.appointmentTime, 'HH:mm')}">09:00</span>
+                        &ndash;
+                        <span th:text="${#temporals.format(appointment.appointmentEndTime, 'HH:mm')}">09:30</span>
+                        <span class="muted small"
+                              th:text="'(' + ${appointment.durationMinutes} + ' minutes)'">(30 minutes)</span>
+                    </dd>
+                    <dt>Dentist</dt>
+                    <dd>
+                        <span th:text="'Dr ' + ${appointment.dentistName}">Dr</span>
+                        <span class="muted small" th:text="${appointment.dentistSpecialization}"></span>
+                    </dd>
+                    <dt>Treatment</dt>
+                    <dd>
+                        <span th:text="${appointment.treatmentName}">Treatment</span>
+                        <span class="muted small"
+                              th:text="'(' + ${currencySymbol} + ' ' + ${appointment.treatmentPrice} + ')'"></span>
+                    </dd>
+                    <dt>Notes</dt>
+                    <dd th:text="${appointment.notes} ?: 'None'">-</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ ACTIONS ============ -->
+    <div class="card no-print">
+        <h2>What happened?</h2>
+        <div class="card-body">
+
+            <div th:if="${allowedTransitions.isEmpty()}" class="alert alert-info mb-0">
+                This appointment is <strong th:text="${appointment.status.displayName}">final</strong>
+                and can no longer be changed. If this is wrong, ask an administrator &mdash;
+                the correction is recorded against their name.
+            </div>
+
+            <div th:unless="${allowedTransitions.isEmpty()}">
+                <form th:action="@{'/appointments/' + ${appointment.appointmentNumber} + '/status'}"
+                      method="post" class="filters">
+                    <div class="field">
+                        <label for="status">Mark as</label>
+                        <select id="status" name="status" required>
+                            <option th:each="s : ${allowedTransitions}" th:value="${s}"
+                                    th:text="${s.displayName}">Status</option>
+                        </select>
+                    </div>
+                    <div class="field" style="flex:2; min-width:260px;">
+                        <label for="reason">Reason (required when cancelling)</label>
+                        <input type="text" id="reason" name="reason"
+                               placeholder="e.g. Patient telephoned to cancel">
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-primary">Update status</button>
+                    </div>
+                </form>
+
+                <hr style="border:none; border-top:1px solid var(--slate-100); margin:1.1rem 0;">
+
+                <form th:action="@{'/appointments/' + ${appointment.appointmentNumber} + '/reschedule'}"
+                      method="post" class="filters">
+                    <div class="field">
+                        <label for="newDate">Move to date</label>
+                        <input type="date" id="newDate" name="newDate" required
+                               th:value="${appointment.appointmentDate}">
+                    </div>
+                    <div class="field">
+                        <label for="newTime">Move to time</label>
+                        <input type="time" id="newTime" name="newTime" step="1800" required
+                               th:value="${appointment.appointmentTime}">
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-secondary">Reschedule</button>
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <a class="btn btn-link"
+                           th:href="@{/appointments/availability(dentistCode=${appointment.dentistCode},
+                                      date=${appointment.appointmentDate})}">Check free slots</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ BILLING ============ -->
+    <div class="card no-print"
+         sec:authorize="hasAnyAuthority('ROLE_ADMIN','ROLE_RECEPTIONIST')">
+        <h2>Bill</h2>
+        <div class="card-body">
+
+            <!-- Already billed -->
+            <div th:if="${appointment.invoiced}">
+                <p>
+                    Bill <span class="mono" th:text="${invoice.invoiceNumber}">INV</span> was issued
+                    on <span th:text="${#temporals.format(invoice.issuedAt, 'dd MMM yyyy')}">date</span>
+                    for
+                    <strong th:text="${currencySymbol} + ' ' +
+                            ${#numbers.formatDecimal(invoice.totalAmount, 1, 'COMMA', 2, 'POINT')}">total</strong>
+                    &mdash;
+                    <span class="badge" th:classappend="${invoice.paymentStatus.cssClass}"
+                          th:text="${invoice.paymentStatus.displayName}">Status</span>
+                </p>
+                <div class="btn-row">
+                    <a class="btn btn-primary"
+                       th:href="@{'/invoices/' + ${invoice.invoiceNumber}}">Open bill</a>
+                    <a class="btn btn-secondary"
+                       th:href="@{'/invoices/' + ${invoice.invoiceNumber} + '/receipt'}">Print receipt</a>
+                </div>
+            </div>
+
+            <!-- Completed but not yet billed -->
+            <div th:if="${!appointment.invoiced and appointment.status.name() == 'COMPLETED'}">
+                <p>This visit is completed and has not yet been billed.</p>
+                <div class="btn-row">
+                    <a class="btn btn-primary"
+                       th:href="@{'/billing/calculate/' + ${appointment.appointmentNumber}}">
+                        Calculate bill
+                    </a>
+                </div>
+            </div>
+
+            <!-- Not yet completed -->
+            <div th:if="${!appointment.invoiced and appointment.status.name() != 'COMPLETED'}">
+                <p class="muted">
+                    A bill can only be issued once the visit is marked <strong>Completed</strong>.
+                    Billing a visit that has not happened would invoice a patient for treatment
+                    they have not received.
+                </p>
+                <form th:action="@{/billing/complete-and-bill}" method="post" class="filters"
+                      th:if="${appointment.status.name() != 'CANCELLED' and appointment.status.name() != 'NO_SHOW'}">
+                    <input type="hidden" name="appointmentNumber"
+                           th:value="${appointment.appointmentNumber}">
+                    <div class="field">
+                        <label for="discountPercentage">Discount %</label>
+                        <input type="number" id="discountPercentage" name="discountPercentage"
+                               min="0" max="50" step="0.5" value="0">
+                    </div>
+                    <div class="field" style="flex:2; min-width:220px;">
+                        <label for="discountReason">Discount reason</label>
+                        <input type="text" id="discountReason" name="discountReason"
+                               placeholder="Only if a discount was approved">
+                    </div>
+                    <div class="field">
+                        <label>&nbsp;</label>
+                        <button type="submit" class="btn btn-success">Complete visit &amp; bill</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ PATIENT HISTORY ============ -->
+    <div class="card">
+        <h2>
+            This patient's visit history
+            <span class="muted small" th:text="'(' + ${#lists.size(history)} + ' visits)'">(0)</span>
+        </h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Appointment No</th>
+                    <th>Date</th>
+                    <th>Dentist</th>
+                    <th>Treatment</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="h : ${history}"
+                    th:style="${h.appointmentNumber == appointment.appointmentNumber}
+                              ? 'background: var(--teal-050); font-weight:600;' : ''">
+                    <td class="mono" th:text="${h.appointmentNumber}">APT</td>
+                    <td class="nowrap"
+                        th:text="${#temporals.format(h.appointmentDate, 'dd MMM yyyy')} + ' ' +
+                                 ${#temporals.format(h.appointmentTime, 'HH:mm')}">Date</td>
+                    <td th:text="'Dr ' + ${h.dentistName}">Dentist</td>
+                    <td th:text="${h.treatmentName}">Treatment</td>
+                    <td>
+                        <span class="badge" th:classappend="${h.status.cssClass}"
+                              th:text="${h.status.displayName}">Status</span>
+                    </td>
+                    <td class="right">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/appointments/' + ${h.appointmentNumber}}"
+                           th:unless="${h.appointmentNumber == appointment.appointmentNumber}">Open</a>
+                        <span class="muted small"
+                              th:if="${h.appointmentNumber == appointment.appointmentNumber}">This visit</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

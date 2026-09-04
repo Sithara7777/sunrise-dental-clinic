@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('billing')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Bills</h1>
+            <div class="sub">Every bill the clinic has issued, and what is still owed.</div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/reports/OUTSTANDING_INVOICES}">
+                Debtor ageing report</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="grid grid-3">
+        <div class="tile alert">
+            <div class="label">Total outstanding</div>
+            <div class="value">
+                <span class="small muted" th:text="${currencySymbol}">Rs.</span>
+                <span th:text="${#numbers.formatDecimal(totalOutstanding, 1, 'COMMA', 2, 'POINT')}">0.00</span>
+            </div>
+            <div class="hint">chase the oldest first</div>
+        </div>
+    </div>
+
+    <div class="card mt-2">
+        <h2>Find a bill</h2>
+        <div class="card-body">
+            <form th:action="@{/invoices}" method="get" class="filters">
+                <div class="field" style="flex:2; min-width:220px;">
+                    <label for="term">Search</label>
+                    <input type="text" id="term" name="term" th:value="${term}"
+                           placeholder="INV-2026-000137 or patient name">
+                </div>
+                <div class="field">
+                    <label for="status">Payment status</label>
+                    <select id="status" name="status">
+                        <option value="">All</option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.displayName}"
+                                th:selected="${status != null and status.name() == s.name()}">Status</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="fromDate">Issued from</label>
+                    <input type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+                </div>
+                <div class="field">
+                    <label for="toDate">Issued to</label>
+                    <input type="date" id="toDate" name="toDate" th:value="${toDate}">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <a class="btn btn-secondary" th:href="@{/invoices}">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Results
+            <span class="muted small" th:text="'(' + ${results.totalElements} + ')'">(0)</span></h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Bill No</th>
+                    <th>Issued</th>
+                    <th>Patient</th>
+                    <th>Treatment</th>
+                    <th class="num">Total</th>
+                    <th class="num">Paid</th>
+                    <th class="num">Balance</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="i : ${results.content}">
+                    <td class="mono" th:text="${i.invoiceNumber}">INV</td>
+                    <td class="nowrap" th:text="${#temporals.format(i.issuedAt, 'dd MMM yyyy')}">Date</td>
+                    <td th:text="${i.patientName}">Patient</td>
+                    <td th:text="${i.treatmentName}">Treatment</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(i.totalAmount, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td class="num"
+                        th:text="${#numbers.formatDecimal(i.amountPaid, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td class="num" style="font-weight:600;"
+                        th:text="${#numbers.formatDecimal(i.balanceDue, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td>
+                        <span class="badge" th:classappend="${i.paymentStatus.cssClass}"
+                              th:text="${i.paymentStatus.displayName}">Status</span>
+                    </td>
+                    <td class="right nowrap">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/invoices/' + ${i.invoiceNumber}}">Open</a>
+                    </td>
+                </tr>
+                <tr th:if="${results.empty}">
+                    <td colspan="9" class="empty">No bills match those criteria.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="pager" th:if="${results.totalPages > 1}">
+            <a class="btn btn-sm btn-secondary" th:unless="${results.first}"
+               th:href="@{/invoices(term=${term}, status=${status}, fromDate=${fromDate},
+                          toDate=${toDate}, page=${results.page - 1})}">Previous</a>
+            <span class="current">
+                Page <span th:text="${results.page + 1}">1</span>
+                of <span th:text="${results.totalPages}">1</span>
+            </span>
+            <a class="btn btn-sm btn-secondary" th:unless="${results.last}"
+               th:href="@{/invoices(term=${term}, status=${status}, fromDate=${fromDate},
+                          toDate=${toDate}, page=${results.page + 1})}">Next</a>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!-- Requirement 3 - searching for appointments. -->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('appointments')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Appointments</h1>
+            <div class="sub">
+                Search by appointment number, patient name or telephone number.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-primary" th:href="@{/appointments/new}">Register New Appointment</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <!-- ============ FILTERS ============ -->
+    <div class="card">
+        <h2>Find an appointment</h2>
+        <div class="card-body">
+            <form th:action="@{/appointments}" method="get" class="filters">
+                <div class="field" style="flex:2; min-width:240px;">
+                    <label for="term">Search</label>
+                    <input type="text" id="term" name="term" th:value="${term}"
+                           placeholder="APT-2026-000137, patient name or 0771234567">
+                </div>
+                <div class="field">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="">All statuses</option>
+                        <option th:each="s : ${statuses}" th:value="${s}"
+                                th:text="${s.displayName}"
+                                th:selected="${status != null and status.name() == s.name()}">Status</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="dentistCode">Dentist</label>
+                    <select id="dentistCode" name="dentistCode">
+                        <option value="">All dentists</option>
+                        <option th:each="d : ${dentists}" th:value="${d.dentistCode}"
+                                th:text="'Dr ' + ${d.fullName}"
+                                th:selected="${dentistCode == d.dentistCode}">Dentist</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label for="fromDate">From</label>
+                    <input type="date" id="fromDate" name="fromDate" th:value="${fromDate}">
+                </div>
+                <div class="field">
+                    <label for="toDate">To</label>
+                    <input type="date" id="toDate" name="toDate" th:value="${toDate}">
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary">Search</button>
+                </div>
+                <div class="field">
+                    <label>&nbsp;</label>
+                    <a class="btn btn-secondary" th:href="@{/appointments}">Clear</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ============ RESULTS ============ -->
+    <div class="card">
+        <h2>
+            Results
+            <span class="muted small" th:text="'(' + ${results.totalElements} + ' matching)'">(0)</span>
+        </h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Appointment No</th>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Patient</th>
+                    <th>Contact</th>
+                    <th>Dentist</th>
+                    <th>Treatment</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="a : ${results.content}">
+                    <td class="mono" th:text="${a.appointmentNumber}">APT</td>
+                    <td class="nowrap" th:text="${#temporals.format(a.appointmentDate, 'dd MMM yyyy')}">Date</td>
+                    <td class="nowrap" th:text="${#temporals.format(a.appointmentTime, 'HH:mm')}">Time</td>
+                    <td th:text="${a.patientName}">Patient</td>
+                    <td class="mono" th:text="${a.contactNumber}">Contact</td>
+                    <td th:text="'Dr ' + ${a.dentistName}">Dentist</td>
+                    <td th:text="${a.treatmentName}">Treatment</td>
+                    <td>
+                        <span class="badge" th:classappend="${a.status.cssClass}"
+                              th:text="${a.status.displayName}">Status</span>
+                    </td>
+                    <td class="right nowrap">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/appointments/' + ${a.appointmentNumber}}">Open</a>
+                    </td>
+                </tr>
+                <tr th:if="${results.empty}">
+                    <td colspan="9" class="empty">
+                        No appointments match those criteria.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ============ PAGER ============ -->
+        <div class="pager" th:if="${results.totalPages > 1}">
+            <a class="btn btn-sm btn-secondary" th:unless="${results.first}"
+               th:href="@{/appointments(term=${term}, status=${status}, dentistCode=${dentistCode},
+                          fromDate=${fromDate}, toDate=${toDate}, page=${results.page - 1})}">Previous</a>
+            <span class="current">
+                Page <span th:text="${results.page + 1}">1</span>
+                of <span th:text="${results.totalPages}">1</span>
+            </span>
+            <a class="btn btn-sm btn-secondary" th:unless="${results.last}"
+               th:href="@{/appointments(term=${term}, status=${status}, dentistCode=${dentistCode},
+                          fromDate=${fromDate}, toDate=${toDate}, page=${results.page + 1})}">Next</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: recentlyViewed}"></div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

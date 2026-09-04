@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('treatments')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1 th:text="${editing} ? 'Edit Treatment' : 'Add Treatment'">Treatment</h1>
+            <div class="sub">
+                Changing a price affects every bill issued from now on. Bills already issued keep
+                the price they were charged at.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/treatments}">Back to catalogue</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <form th:action="@{/treatments}" th:object="${treatment}" method="post">
+        <input type="hidden" name="editingFlag" th:value="${editing}">
+        <input type="hidden" th:field="*{id}">
+
+        <fieldset>
+            <legend>Treatment details</legend>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="code">Code <span class="req">*</span></label>
+                    <input type="text" id="code" th:field="*{code}" required
+                           th:readonly="${editing}" placeholder="e.g. WHITEN"
+                           th:classappend="${#fields.hasErrors('code')} ? 'invalid'">
+                    <span class="help" th:if="${editing}">The code cannot be changed once bills
+                        reference it.</span>
+                    <span class="err" th:if="${#fields.hasErrors('code')}" th:errors="*{code}"></span>
+                </div>
+                <div class="field">
+                    <label for="name">Name <span class="req">*</span></label>
+                    <input type="text" id="name" th:field="*{name}" required
+                           th:classappend="${#fields.hasErrors('name')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('name')}" th:errors="*{name}"></span>
+                </div>
+                <div class="field wide">
+                    <label for="description">Description</label>
+                    <input type="text" id="description" th:field="*{description}"
+                           placeholder="What the treatment involves, in plain language">
+                </div>
+                <div class="field">
+                    <label for="category">Category <span class="req">*</span></label>
+                    <input type="text" id="category" th:field="*{category}" required
+                           placeholder="Preventive, Restorative, Surgical, Cosmetic, ..."
+                           th:classappend="${#fields.hasErrors('category')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('category')}" th:errors="*{category}"></span>
+                </div>
+                <div class="field">
+                    <label for="basePrice">Base price (LKR) <span class="req">*</span></label>
+                    <input type="number" id="basePrice" th:field="*{basePrice}"
+                           step="0.01" min="0" required
+                           th:classappend="${#fields.hasErrors('basePrice')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('basePrice')}" th:errors="*{basePrice}"></span>
+                </div>
+                <div class="field">
+                    <label for="durationMinutes">Duration (minutes) <span class="req">*</span></label>
+                    <input type="number" id="durationMinutes" th:field="*{durationMinutes}"
+                           min="15" max="480" step="15" required
+                           th:classappend="${#fields.hasErrors('durationMinutes')} ? 'invalid'">
+                    <span class="help">Determines how many 30-minute diary slots the treatment
+                        blocks.</span>
+                    <span class="err" th:if="${#fields.hasErrors('durationMinutes')}"
+                          th:errors="*{durationMinutes}"></span>
+                </div>
+                <div class="field">
+                    <label for="pricingStrategy">Pricing rule <span class="req">*</span></label>
+                    <select id="pricingStrategy" th:field="*{pricingStrategy}" required>
+                        <option th:each="s : ${pricingStrategies}" th:value="${s}" th:text="${s}">RULE</option>
+                    </select>
+                    <span class="help">
+                        STANDARD &mdash; list price, concessions apply.
+                        SURGICAL &mdash; adds a sterilisation surcharge.
+                        COSMETIC &mdash; elective, no age concessions.
+                        EMERGENCY &mdash; out-of-hours loading.
+                    </span>
+                    <span class="err" th:if="${#fields.hasErrors('pricingStrategy')}"
+                          th:errors="*{pricingStrategy}"></span>
+                </div>
+                <div class="field">
+                    <label for="active">Status</label>
+                    <select id="active" th:field="*{active}">
+                        <option th:value="true">Bookable</option>
+                        <option th:value="false">Withdrawn</option>
+                    </select>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="btn-row">
+            <button type="submit" class="btn btn-primary"
+                    th:text="${editing} ? 'Save changes' : 'Add treatment'">Save</button>
+            <a class="btn btn-secondary" th:href="@{/treatments}">Cancel</a>
+        </div>
+    </form>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

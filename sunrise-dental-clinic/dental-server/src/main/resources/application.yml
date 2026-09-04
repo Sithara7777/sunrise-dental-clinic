@@ -1,0 +1,218 @@
+# =========================================================================
+#  Sunrise Dental Clinic Management System - server configuration
+#  CIS6003 Advanced Programming - WRIT1
+# =========================================================================
+#  The DEFAULT profile runs against a file-backed H2 database that needs no
+#  installation, so the whole system starts with a single command on any
+#  machine with a JDK. The "mysql" profile at the bottom of this file switches
+#  to MySQL 8 and its own migration set.
+# =========================================================================
+
+spring:
+  application:
+    name: sunrise-dental-clinic
+
+  # -----------------------------------------------------------------------
+  # Data source - H2 in file mode.
+  # File mode, not in-memory: the clinic's data must survive a restart, and a
+  # marker who books an appointment then stops the application expects to find
+  # it still there.
+  # -----------------------------------------------------------------------
+  datasource:
+    url: jdbc:h2:file:./data/sunrisedental;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    hikari:
+      pool-name: SunriseDentalPool
+      # Sized for more than the obvious "one request, one connection" count.
+      # Several operations deliberately open a SECOND, independent connection
+      # while the first is still held open - SequenceAllocator and the
+      # notification observers both use REQUIRES_NEW so that a sequence
+      # allocation or a delivery-log write commits (or fails) on its own,
+      # rather than being rolled back by an unrelated failure later in the
+      # same booking. A burst of concurrent bookings can therefore each need
+      # two connections at their peak; 20 gives real headroom for a busy front
+      # desk without over-provisioning for a single-clinic deployment.
+      maximum-pool-size: 20
+      minimum-idle: 4
+      connection-timeout: 20000
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: false
+
+  # -----------------------------------------------------------------------
+  # JPA. ddl-auto is VALIDATE, never update or create.
+  # Flyway owns the schema; Hibernate only checks that the Java model still
+  # matches it and refuses to start if it does not. That turns a silent model
+  # drift into a loud start-up failure.
+  # -----------------------------------------------------------------------
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false          # no lazy loading in the view layer
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+    show-sql: false
+
+  # -----------------------------------------------------------------------
+  # Flyway - versioned, reviewable, repeatable schema migrations.
+  # -----------------------------------------------------------------------
+  flyway:
+    enabled: true
+    locations: classpath:db/migration/h2
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  thymeleaf:
+    cache: false                 # templates reload without a restart in development
+
+  mvc:
+    problemdetails:
+      enabled: false             # the API uses its own ApiResponse envelope
+
+  # SMTP is only contacted when clinic.notifications.smtp-enabled is true.
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+        connectiontimeout: 5000
+        timeout: 5000
+        writetimeout: 5000
+
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+    whitelabel:
+      enabled: false
+  servlet:
+    session:
+      timeout: 30m
+      cookie:
+        name: JSESSIONID
+        http-only: true          # unreadable from JavaScript, so XSS cannot steal it
+        secure: false            # set true behind HTTPS in production
+        same-site: lax           # blocks the cross-site request that CSRF relies on
+
+# -----------------------------------------------------------------------
+# Application settings, bound to ClinicProperties.
+# -----------------------------------------------------------------------
+clinic:
+  notifications:
+    enabled: true
+    smtp-enabled: false          # true = real e-mail; false = console gateway
+    email-enabled: true
+    sms-enabled: true
+    from-address: no-reply@sunrisedental.lk
+    from-name: Sunrise Dental Clinic
+    reminder-lead-hours: 24
+  demo:
+    seed-enabled: true           # populates six weeks of history for the reports
+    patient-count: 40
+    past-days: 45
+    future-days: 21
+  security:
+    default-admin-password: Admin@123
+    default-reception-password: Reception@123
+    default-dentist-password: Dentist@123
+    session-timeout-minutes: 30
+    remember-me-days: 7
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: alpha
+    tagsSorter: alpha
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      # Anonymous callers see only UP/DOWN. Component detail - which database,
+      # which host - is an information leak to an unauthenticated caller.
+      show-details: when-authorized
+  health:
+    mail:
+      # Spring Boot adds a mail health indicator whenever spring-boot-starter-mail
+      # is present, and it opens a real SMTP connection. In the default profile
+      # e-mail is delivered by the console gateway and no SMTP server is
+      # configured, so that probe would fail and drag the whole health endpoint
+      # DOWN - breaking the CI health check and any load-balancer probe for a
+      # dependency the application is not actually using.
+      # Set this to true in a deployment where clinic.notifications.smtp-enabled
+      # is also true, so that a genuine mail outage is reported.
+      enabled: false
+  info:
+    env:
+      enabled: true
+
+logging:
+  level:
+    root: INFO
+    lk.icbt.cis6003.dental: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
+
+info:
+  application:
+    name: Sunrise Dental Clinic Management System
+    module: CIS6003 Advanced Programming
+    assessment: WRIT1
+
+---
+# =========================================================================
+#  MySQL profile:  --spring.profiles.active=mysql
+#  Uses the migration set under db/migration/mysql, which declares native
+#  stored functions, stored procedures and triggers.
+# =========================================================================
+spring:
+  config:
+    activate:
+      on-profile: mysql
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:sunrise_dental}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Colombo
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    database-platform: org.hibernate.dialect.MySQLDialect
+
+  flyway:
+    locations: classpath:db/migration/mysql
+
+  h2:
+    console:
+      enabled: false

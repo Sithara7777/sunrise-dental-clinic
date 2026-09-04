@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<!--
+  Requirement 5 - "Provide step-by-step instructions for new staff on how to
+  use the system."
+
+  The topics come from HelpService, which is the same source the REST API and
+  the desktop client read, so all three can never disagree. The booking and
+  pricing rule lists below are read from the LIVE configuration rather than
+  retyped, so they cannot drift out of date.
+-->
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}" sec:authorize="isAuthenticated()"></div>
+<nav th:replace="~{fragments/layout :: nav('help')}" sec:authorize="isAuthenticated()"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Help</h1>
+            <div class="sub">
+                Step-by-step instructions for new staff. Work through them in order on your first
+                morning.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/login}" sec:authorize="!isAuthenticated()">
+                Back to sign in</a>
+            <a class="btn btn-secondary" th:href="@{/dashboard}" sec:authorize="isAuthenticated()">
+                Back to dashboard</a>
+        </div>
+    </div>
+
+    <!-- ============ CONTENTS ============ -->
+    <div class="card">
+        <h2>Contents</h2>
+        <div class="card-body">
+            <div class="chips">
+                <a class="chip" th:each="t : ${topics}"
+                   th:href="'#' + ${t.topicId}" th:text="${t.title}">Topic</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ TOPICS ============ -->
+    <div class="card" th:each="topic : ${topics}" th:id="${topic.topicId}">
+        <h2 th:text="${topic.title}">Topic</h2>
+        <div class="card-body">
+            <p th:text="${topic.summary}">Summary</p>
+
+            <ol class="steps">
+                <li th:each="step : ${topic.steps}" th:text="${step}">Step</li>
+            </ol>
+
+            <ul class="tips" th:if="${!#lists.isEmpty(topic.tips)}">
+                <li th:each="tip : ${topic.tips}">
+                    <strong>Tip &mdash;</strong> <span th:text="${tip}">Tip</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ============ LIVE CONFIGURATION ============ -->
+    <div class="grid grid-2">
+
+        <div class="card">
+            <h2>Why a booking can be refused</h2>
+            <div class="card-body">
+                <p class="small muted" style="margin-top:0;">
+                    Every booking passes through these rules, in this order. The first one that
+                    fails is the message you see, so you always get the most fundamental reason
+                    rather than a confusing later one.
+                </p>
+                <ol class="steps">
+                    <li th:each="rule : ${bookingRules}">
+                        <span class="mono small" th:text="${rule}">RULE</span>
+                        <span th:switch="${rule}">
+                            <span th:case="'BOOKING_WINDOW'">
+                                &mdash; the date must be in the future and within 180 days.</span>
+                            <span th:case="'CLINIC_HOURS'">
+                                &mdash; the whole appointment must finish before the clinic closes.</span>
+                            <span th:case="'SLOT_ALIGNMENT'">
+                                &mdash; appointments start on the hour or the half hour.</span>
+                            <span th:case="'DENTIST_AVAILABILITY'">
+                                &mdash; the dentist must be practising and on shift.</span>
+                            <span th:case="'DENTIST_DOUBLE_BOOKING'">
+                                &mdash; the dentist must not already be booked at that time.</span>
+                            <span th:case="'PATIENT_DOUBLE_BOOKING'">
+                                &mdash; the patient must not already be booked elsewhere then.</span>
+                            <span th:case="*"></span>
+                        </span>
+                    </li>
+                </ol>
+                <p class="small muted mb-0">
+                    This list is read from the running system, not typed into this page, so it is
+                    always the rules actually in force.
+                </p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>How bills are priced</h2>
+            <div class="card-body">
+                <p class="small muted" style="margin-top:0;">
+                    Every treatment names one of these rules. You never type an amount &mdash;
+                    the system reads the dentist's consultation fee and the treatment price.
+                </p>
+                <dl class="detail">
+                    <th:block th:each="rule : ${pricingRules}">
+                        <dt class="mono" th:text="${rule.key}">KEY</dt>
+                        <dd>
+                            <strong th:text="${rule.displayName}">Name</strong><br>
+                            <span class="small" th:text="${rule.description}">Description</span>
+                        </dd>
+                    </th:block>
+                </dl>
+                <ul class="tips">
+                    <li>
+                        <strong>Concessions &mdash;</strong>
+                        senior citizens (65 and over) receive 10% and children (under 18) receive 5%
+                        on clinically necessary treatment. These are applied automatically from the
+                        patient's date of birth. Cosmetic treatment is excluded.
+                    </li>
+                    <li>
+                        <strong>Discounts do not stack &mdash;</strong>
+                        the larger of the automatic concession and any approved manual discount
+                        applies, capped at 50%.
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Still stuck?</h2>
+        <div class="card-body">
+            <p class="mb-0">
+                Telephone the clinic on <strong th:text="${clinicPhone}">phone</strong> and ask for
+                the practice manager. If the system itself is misbehaving, note what you were doing
+                at the time &mdash; the administrator can find the matching entry in the audit
+                trail.
+            </p>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

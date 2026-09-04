@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<!--
+  System diagnostics.
+
+  Four of this project's patterns register themselves automatically: pricing
+  strategies, booking rules, event observers and report generators. That is
+  convenient but has one real drawback - no source file lists the members, so a
+  reader cannot see at a glance what is loaded. This page removes that
+  objection by asking the RUNNING application what it actually registered.
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('admin')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>System Diagnostics</h1>
+            <div class="sub">
+                What this running instance actually loaded &mdash; read from the live registries,
+                not from documentation.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/swagger-ui.html}">API documentation</a>
+            <a class="btn btn-secondary" th:href="@{/actuator/health}">Health check</a>
+            <a class="btn btn-secondary" th:href="@{/h2-console}">Database console</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="grid grid-2">
+
+        <!-- ============ STRATEGY ============ -->
+        <div class="card">
+            <h2>Pricing rules (Strategy pattern)</h2>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr><th>Key</th><th>Rule</th><th>What it does</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="s : ${pricingStrategies}">
+                        <td class="mono" th:text="${s.key}">KEY</td>
+                        <td th:text="${s.displayName}">Name</td>
+                        <td class="small" th:text="${s.description}">Description</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-body">
+                <p class="small muted mb-0">
+                    Resolved from <span class="mono">treatment.pricing_strategy</span> at billing
+                    time. Adding a rule is one new <span class="mono">@Component</span> &mdash;
+                    the factory registers it automatically and BillingService is not touched.
+                </p>
+            </div>
+        </div>
+
+        <!-- ============ CHAIN OF RESPONSIBILITY ============ -->
+        <div class="card">
+            <h2>Booking rules (Chain of Responsibility)</h2>
+            <div class="card-body">
+                <ol class="steps">
+                    <li th:each="r : ${bookingRules}" class="mono" th:text="${r}">RULE</li>
+                </ol>
+                <p class="small muted mb-0">
+                    Run in this order; the first failure stops the chain, so the receptionist sees
+                    the most fundamental problem rather than a confusing downstream one.
+                </p>
+            </div>
+        </div>
+
+        <!-- ============ OBSERVER ============ -->
+        <div class="card">
+            <h2>Event observers (Observer pattern)</h2>
+            <div class="card-body">
+                <ul>
+                    <li th:each="o : ${observers}" class="mono" th:text="${o}">Observer</li>
+                </ul>
+                <p class="small muted mb-0">
+                    Each is invoked inside its own try/catch. An SMS gateway outage cannot roll
+                    back a booking &mdash; the clinic's core job does not depend on a third party
+                    being up.
+                </p>
+            </div>
+        </div>
+
+        <!-- ============ TEMPLATE METHOD + FACTORY ============ -->
+        <div class="card">
+            <h2>Reports (Template Method + Factory)</h2>
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                    <tr><th>Code</th><th>Report</th></tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="r : ${reports}">
+                        <td class="mono" th:text="${r.code}">CODE</td>
+                        <td>
+                            <strong th:text="${r.title}">Title</strong>
+                            <div class="small muted" th:text="${r.description}">Description</div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Architecture</h2>
+        <div class="card-body">
+            <dl class="detail">
+                <dt>Presentation tier</dt>
+                <dd>Thymeleaf MVC controllers (browser) and REST controllers (web services
+                    consumed by the desktop client)</dd>
+                <dt>Business tier</dt>
+                <dd>Services, pricing strategies, booking validation chain, notification
+                    observers, report generators</dd>
+                <dt>Data tier</dt>
+                <dd>JPA entities, Spring Data repositories, a JDBC reporting DAO over database
+                    views and stored functions, Flyway-managed schema</dd>
+                <dt>Distribution</dt>
+                <dd>The desktop client is a separate process reaching this server only over
+                    HTTP + JSON; it shares no code except the DTO contract</dd>
+                <dt>Database features in use</dt>
+                <dd>5 reporting views, 2 stored functions, 2 triggers, unique and CHECK
+                    constraints, a pessimistic-locked sequence table, optimistic locking</dd>
+            </dl>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

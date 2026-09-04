@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('patients')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1 th:text="${editing} ? 'Edit Patient' : 'Register Patient'">Patient</h1>
+            <div class="sub" th:if="${editing}">
+                <span class="mono" th:text="${patient.patientCode}">PAT</span>
+            </div>
+            <div class="sub" th:unless="${editing}">
+                The patient number is issued automatically once the record is saved.
+            </div>
+        </div>
+        <div class="actions">
+            <a class="btn btn-secondary" th:href="@{/patients}">Back to patients</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <form th:action="${editing} ? @{'/patients/' + ${patient.patientCode}} : @{/patients}"
+          th:object="${patient}" method="post">
+
+        <fieldset>
+            <legend>Patient details</legend>
+            <div class="form-grid">
+
+                <div class="field">
+                    <label for="fullName">Full name <span class="req">*</span></label>
+                    <input type="text" id="fullName" th:field="*{fullName}" required
+                           th:classappend="${#fields.hasErrors('fullName')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('fullName')}" th:errors="*{fullName}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="contactNumber">Contact number <span class="req">*</span></label>
+                    <input type="tel" id="contactNumber" th:field="*{contactNumber}" required
+                           placeholder="0771234567"
+                           th:classappend="${#fields.hasErrors('contactNumber')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('contactNumber')}"
+                          th:errors="*{contactNumber}"></span>
+                </div>
+
+                <div class="field wide">
+                    <label for="address">Address <span class="req">*</span></label>
+                    <input type="text" id="address" th:field="*{address}" required
+                           th:classappend="${#fields.hasErrors('address')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('address')}" th:errors="*{address}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="email">E-mail address</label>
+                    <input type="email" id="email" th:field="*{email}"
+                           th:classappend="${#fields.hasErrors('email')} ? 'invalid'">
+                    <span class="err" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="nic">NIC</label>
+                    <input type="text" id="nic" th:field="*{nic}"
+                           placeholder="199012345678 or 901234567V"
+                           th:classappend="${#fields.hasErrors('nic')} ? 'invalid'">
+                    <span class="help">Must be unique &mdash; it is what distinguishes two patients
+                        with the same name.</span>
+                    <span class="err" th:if="${#fields.hasErrors('nic')}" th:errors="*{nic}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="dateOfBirth">Date of birth</label>
+                    <input type="date" id="dateOfBirth" th:field="*{dateOfBirth}"
+                           th:classappend="${#fields.hasErrors('dateOfBirth')} ? 'invalid'">
+                    <span class="help">Drives the automatic senior and child concessions.</span>
+                    <span class="err" th:if="${#fields.hasErrors('dateOfBirth')}"
+                          th:errors="*{dateOfBirth}"></span>
+                </div>
+
+                <div class="field">
+                    <label for="gender">Gender</label>
+                    <select id="gender" th:field="*{gender}">
+                        <option value="">Not stated</option>
+                        <option th:each="g : ${genders}" th:value="${g}"
+                                th:text="${g.displayName}">Gender</option>
+                    </select>
+                </div>
+
+                <div class="field wide">
+                    <label for="medicalNotes">Clinical notes</label>
+                    <textarea id="medicalNotes" th:field="*{medicalNotes}" rows="3"
+                              placeholder="Allergies, medication, anything the dentist must know"></textarea>
+                    <span class="err" th:if="${#fields.hasErrors('medicalNotes')}"
+                          th:errors="*{medicalNotes}"></span>
+                </div>
+            </div>
+        </fieldset>
+
+        <div class="btn-row">
+            <button type="submit" class="btn btn-primary"
+                    th:text="${editing} ? 'Save changes' : 'Register patient'">Save</button>
+            <a class="btn btn-secondary" th:href="@{/patients}">Cancel</a>
+        </div>
+    </form>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>

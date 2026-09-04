@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
+<head th:replace="~{fragments/layout :: head(${pageTitle})}"></head>
+
+<body th:classappend="'density-' + ${density}">
+
+<div th:replace="~{fragments/layout :: topbar}"></div>
+<nav th:replace="~{fragments/layout :: nav('dentists')}"></nav>
+
+<main class="page">
+
+    <div class="page-head">
+        <div>
+            <h1>Dentists</h1>
+            <div class="sub">
+                Consultation fee and working hours per dentist. Both are used every time an
+                appointment is booked or a bill is calculated.
+            </div>
+        </div>
+        <div class="actions" sec:authorize="hasAuthority('ROLE_ADMIN')">
+            <a class="btn btn-primary" th:href="@{/dentists/new}">Add Dentist</a>
+        </div>
+    </div>
+
+    <div th:replace="~{fragments/layout :: messages}"></div>
+
+    <div class="card">
+        <h2>Roster</h2>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Specialization</th>
+                    <th>Contact</th>
+                    <th class="num">Consultation fee</th>
+                    <th>SLMC No</th>
+                    <th>Status</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="d : ${dentists}" th:style="${!d.active} ? 'opacity:.55;' : ''">
+                    <td class="mono" th:text="${d.dentistCode}">DEN</td>
+                    <td th:text="'Dr ' + ${d.fullName}">Name</td>
+                    <td th:text="${d.specialization}">Specialization</td>
+                    <td class="mono" th:text="${d.contactNumber}">Contact</td>
+                    <td class="num"
+                        th:text="${currencySymbol} + ' ' +
+                                 ${#numbers.formatDecimal(d.consultationFee, 1, 'COMMA', 2, 'POINT')}">0.00</td>
+                    <td class="mono small" th:text="${d.slmcRegistrationNo} ?: '-'">-</td>
+                    <td>
+                        <span class="badge" th:classappend="${d.active} ? 'badge-completed' : 'badge-cancelled'"
+                              th:text="${d.active} ? 'Practising' : 'Retired'">Status</span>
+                    </td>
+                    <td class="right nowrap" sec:authorize="hasAuthority('ROLE_ADMIN')">
+                        <a class="btn btn-sm btn-secondary"
+                           th:href="@{'/dentists/' + ${d.dentistCode} + '/edit'}">Edit</a>
+                        <form th:action="@{'/dentists/' + ${d.dentistCode} + '/toggle'}"
+                              method="post" style="display:inline;">
+                            <button type="submit" class="btn btn-sm"
+                                    th:classappend="${d.active} ? 'btn-warning' : 'btn-success'"
+                                    th:text="${d.active} ? 'Retire' : 'Reinstate'">Toggle</button>
+                        </form>
+                    </td>
+                    <td sec:authorize="!hasAuthority('ROLE_ADMIN')"></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-body">
+            <p class="small muted mb-0">
+                A dentist who leaves is marked <em>retired</em>, never deleted. Their name must
+                remain readable on every appointment they treated and every bill they generated.
+            </p>
+        </div>
+    </div>
+
+</main>
+
+<footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
